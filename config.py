@@ -8,7 +8,10 @@ OCR_SETTINGS = {
 
 LLM_SETTINGS = {
     "step1_model": "deepseek-r1:8b",
-    "text_to_JSON_model": "deepseek-r1:8b"
+    "text_to_JSON_model": "deepseek-r1:8b",
+    "models_path": r"D:\LLMs\models",
+    "max_loaded_models": "3",
+    "keep_alive": "5m"
 }
 
 STANDARD_PROMPT = """
