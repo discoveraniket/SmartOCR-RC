@@ -1,0 +1,27 @@
+{
+    "OCR_SETTINGS": {
+        "lang": "en",
+        "use_angle_cls": true,
+        "show_log": false,
+        "ocr_version": "PP-OCRv4",
+        "use_gpu": false,
+        "det_db_thresh": 0.3,
+        "det_db_box_thresh": 0.3,
+        "det_db_unclip_ratio": 2.0,
+        "det_limit_side_len": 1500,
+        "drop_score": 0.05,
+        "enable_mkldnn": true,
+        "cpu_threads": 4,
+        "rec_image_shape": "3, 48, 320",
+        "crop_padding": 100,
+        "default_input_dir": "data",
+        "default_output_dir": "output"
+    },
+    "LLM_SETTINGS": {
+        "step1_model": "deepseek-r1:8b",
+        "text_to_JSON_model": "deepseek-r1:8b",
+        "models_path": "D:\\LLMs\\models",
+        "max_loaded_models": "3",
+        "keep_alive": "5m"
+    }
+}

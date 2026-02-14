@@ -204,6 +204,7 @@ class Dashboard(ctk.CTk):
             "enable_mkldnn": "Use Intel MKLDNN for faster CPU processing.",
             "cpu_threads": "Number of CPU threads to use.",
             "rec_image_shape": "Input shape for the recognition model.",
+            "crop_padding": "Padding (in pixels) added around the text area during auto-crop.",
             "step1_model": "Ollama model used for initial text cleaning/reasoning.",
             "text_to_JSON_model": "Ollama model used for final data extraction.",
             "models_path": "Local path where LLM models are stored.",

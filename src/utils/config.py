@@ -21,7 +21,19 @@ FACTORY_DEFAULTS = {
         "cpu_threads": 4,
         "rec_image_shape": "3, 48, 320",
         "default_input_dir": "data",
-        "default_output_dir": "output"
+        "default_output_dir": "output",
+        "crop_padding": 20
+    },
+    "KEY_MAP": {
+        "viewer_next": "<Control-Right>",
+        "viewer_prev": "<Control-Left>",
+        "viewer_save_data": "<Control-s>",
+        "viewer_save_img": "<Control-S>",
+        "viewer_rotate": "<Control-r>",
+        "viewer_crop": "<Control-c>",
+        "viewer_reprocess": "<Control-a>",
+        "viewer_settings": "<Control-g>",
+        "viewer_reset": "<Control-0>"
     },
     "LLM_SETTINGS": {
         "step1_model": "deepseek-r1:8b",
@@ -34,22 +46,25 @@ FACTORY_DEFAULTS = {
 
 OCR_SETTINGS = FACTORY_DEFAULTS["OCR_SETTINGS"].copy()
 LLM_SETTINGS = FACTORY_DEFAULTS["LLM_SETTINGS"].copy()
+KEY_MAP = FACTORY_DEFAULTS["KEY_MAP"].copy()
 
 def load_config():
-    global OCR_SETTINGS, LLM_SETTINGS
+    global OCR_SETTINGS, LLM_SETTINGS, KEY_MAP
     if os.path.exists(CONFIG_FILE):
         try:
             with open(CONFIG_FILE, "r") as f:
                 config = json.load(f)
                 OCR_SETTINGS.update(config.get("OCR_SETTINGS", {}))
                 LLM_SETTINGS.update(config.get("LLM_SETTINGS", {}))
+                KEY_MAP.update(config.get("KEY_MAP", {}))
         except Exception as e:
             print(f"Error loading config: {e}")
 
-def save_config(ocr_settings, llm_settings):
+def save_config(ocr_settings, llm_settings, key_map=None):
     config = {
         "OCR_SETTINGS": ocr_settings,
-        "LLM_SETTINGS": llm_settings
+        "LLM_SETTINGS": llm_settings,
+        "KEY_MAP": key_map or KEY_MAP
     }
     try:
         with open(CONFIG_FILE, "w") as f:
@@ -98,17 +113,6 @@ Extract specific data points from the provided OCR text and return them in a str
     "mobile" : "String (10 digits)"
 }
 """
-
-# 3. **Mobile Number**:
-#    - Locate a 10-digit Indian mobile number. Sometimes OCR variation  introduce letter or alter the digit count. if it is at the end of the file, predict it as mobile number.
-#    - This is typically positioned toward the end of the text string. 
-#    - Ensure the output is digits only.
-# 3. **Mobile Number**:
-#    - Locate a 10-digit Indian mobile number.Focus your search on the last 3-4 line of the provided OCR_TEXT.
-#    - Look for a 10-digit sequence.
-#    - Even if OCR has inserted letters (e.g."Mobi1e: 987O54321O"), correct it to exact 10 digits only.
-
-
 
 STANDARD_PROMPT1 = """
 You are a precision data extraction tool. Your task is to extract the 'Ration Card ID' from the provided OCR text.
