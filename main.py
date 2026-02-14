@@ -2,10 +2,11 @@ import logging
 import sys
 import time
 import os
+import json
 import config
 from ocr_script import OcrProcessor
 from llm_processor import LlmManager
-from file_manager import save_to_file, append_llm_result
+from file_manager import save_to_file, append_llm_result, save_to_csv, copy_and_rename_image
 
 def setup_logging():
     logging.basicConfig(
@@ -20,7 +21,9 @@ def run_pipeline(image_path: str):
     
     # Generate output path based on image filename
     base_name = os.path.splitext(os.path.basename(image_path))[0]
-    output_path = f"{base_name}_output.txt"
+    output_path = os.path.join("output", "logs", f"{base_name}_output.txt")
+    csv_path = os.path.join("output", "results.csv")
+    output_dir = "output"
 
     # 2. OCR Stage
     ocr = OcrProcessor()
@@ -58,6 +61,8 @@ def run_pipeline(image_path: str):
         logger.error("LLM stage failed to produce a result.")
         return
     
+    #----------Text to JSON----------
+
     model = config.LLM_SETTINGS.get("text_to_JSON_model")
     prompt = f"{config.TEXT_TO_JSON_PROMPT}\n\nTEXT:\n{result['answer']}"
 
@@ -69,6 +74,24 @@ def run_pipeline(image_path: str):
     
     if result:
         append_llm_result(output_path, result)
+        
+        # Parse JSON and save to CSV
+        try:
+            data = json.loads(result['answer'])
+            category = data.get('category', 'UNKNOWN')
+            id_val = data.get('id', 'UNKNOWN')
+            
+            # Copy image to output folder with new name
+            ext = os.path.splitext(image_path)[1]
+            new_image_name = f"{category}_{id_val}{ext}"
+            new_image_path = copy_and_rename_image(image_path, output_dir, new_image_name)
+            
+            # Update data with new image name and save to CSV
+            data['processed_image_name'] = os.path.basename(new_image_path)
+            save_to_csv(data, csv_path)
+            
+        except Exception as e:
+            logger.error(f"Failed to parse JSON or save CSV: {e}")
     else:
         logger.error("Text to JSON failed to produce a result.")
 

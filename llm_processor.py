@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 class LlmManager:
     def __init__(self, model_name: str = None):
-        os.environ["OLLAMA_MODELS"] = r"E:\LLM\.ollama\models"
+        os.environ["OLLAMA_MODELS"] = r"D:\LLMs\models"
 
     def initialize_service(self) -> bool:
         """Starts Ollama service."""
