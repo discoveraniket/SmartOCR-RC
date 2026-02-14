@@ -29,18 +29,18 @@ FACTORY_DEFAULTS = {
     "KEY_MAP": {
         "viewer_next": "<Control-Right>",
         "viewer_prev": "<Control-Left>",
-        "viewer_save_data": "<Control-s>",
-        "viewer_save_img": "<Control-S>",
-        "viewer_rotate": "<Control-r>",
-        "viewer_crop": "<Control-c>",
-        "viewer_reprocess": "<Control-a>",
-        "viewer_settings": "<Control-g>",
+        "viewer_save_data": "<Control-S>",
+        "viewer_save_img": "<Control-I>",
+        "viewer_rotate": "<Control-R>",
+        "viewer_crop": "<Control-C>",
+        "viewer_reprocess": "<Control-A>",
+        "viewer_settings": "<Control-G>",
         "viewer_reset": "<Control-0>"
     },
     "LLM_SETTINGS": {
         "step1_model": "deepseek-r1:8b",
         "text_to_JSON_model": "deepseek-r1:8b",
-        "available_models": ["deepseek-r1:8b", "llama3.2:3b", "richardyoung/olmocr2:7b-q8"],
+        "available_models": ["deepseek-r1:8b", "llama3.2:3b", "richardyoung/olmocr2:7b-q8", "qwen2.5:14b-instruct"],
         "models_path": r"D:\LLMs\models",
         "max_loaded_models": "3",
         "keep_alive": "5m",
@@ -111,9 +111,13 @@ Extract specific data points from the provided OCR text and return them in a str
 2. **Card Holder Name**:
    - Locate the keyword "Name of the Card Holder:" or similar OCR variations.
    - Extract the name (FirstName LastName) following this label.
+   - Names are mostly 2 or 3 words (e.g. ANIKET SARKAR OR ARITRA KUMAR PATRA).
+   - Ignore dealer name or father name or husban name for this.
+   - If a 12 digit number is present with the name, ignore it as dealer name. [e.g. ALOKESH MISHRA(134000500036)] here "ALOKESH MISHRA" is dealer name, so it must be ignored.
 
 3. **Mobile Number**:
-    - **Location**: Most likely found in the final 20% of the text or the last few lines
+    - The mobile number "9903055505" is wrong number. If you see it ignore it.
+    - **Location**: Most likely found in the final 20% of the text or the last few lines. if not there, you should look for it in the entire text.
     - **OCR Correction**:
     - Replace common character misreads: 'or 'o' -> '0', 'I' or 'l' -> '1', 'S' -> '5, 'B' -> '8'.
     - **Digit Count**: If the count is slightly off (e.g., 9 or 11 digits), use surrounding context to determine if a digit was missed or added by OCR and normalize it to 10 digits if possible; dont return null.
@@ -186,3 +190,5 @@ JSON Template:
     "mobile" : "String (10 digits)"
 }}
 """
+
+# image_viewer.py -> entry_font = ctk.CTkFont(size=30)

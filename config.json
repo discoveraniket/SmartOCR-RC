@@ -17,10 +17,10 @@
         "auto_crop": true,
         "dump_text_flow": true,
         "default_input_dir": "D:/Codes/GitHub/RC-PaddleOCR - v2/data",
-        "default_output_dir": "D:/Codes/GitHub/RC-PaddleOCR - v2/output"
+        "default_output_dir": "D:/Desktop/Duck/Output"
     },
     "LLM_SETTINGS": {
-        "step1_model": "deepseek-r1:8b",
+        "step1_model": "qwen2.5:14b-instruct",
         "text_to_JSON_model": "deepseek-r1:8b",
         "models_path": "D:\\LLMs\\models",
         "max_loaded_models": "3",
@@ -31,12 +31,12 @@
     "KEY_MAP": {
         "viewer_next": "<Control-Right>",
         "viewer_prev": "<Control-Left>",
-        "viewer_save_data": "<Control-s>",
-        "viewer_save_img": "<Control-S>",
-        "viewer_rotate": "<Control-r>",
-        "viewer_crop": "<Control-c>",
-        "viewer_reprocess": "<Control-a>",
-        "viewer_settings": "<Control-g>",
+        "viewer_save_data": "<Control-S>",
+        "viewer_save_img": "<Control-I>",
+        "viewer_rotate": "<Control-R>",
+        "viewer_crop": "<Control-C>",
+        "viewer_reprocess": "<Control-A>",
+        "viewer_settings": "<Control-G>",
         "viewer_reset": "<Control-0>"
     }
 }

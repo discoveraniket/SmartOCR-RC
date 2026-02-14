@@ -139,7 +139,10 @@ class ImageViewerWindow(ctk.CTkToplevel):
         self.dir_label.pack(side="left")
         ctk.CTkButton(dir_frame, text="Browse", width=60, height=24, command=self.browse_output_dir).pack(side="right")
 
-        ctk.CTkLabel(self.data_frame, text="Extracted Data", font=ctk.CTkFont(size=18, weight="bold")).pack(pady=20)
+        self.count_label = ctk.CTkLabel(self.data_frame, text="Image 0 of 0", font=ctk.CTkFont(size=14, weight="bold"))
+        self.count_label.pack(pady=(10, 0))
+
+        ctk.CTkLabel(self.data_frame, text="Extracted Data", font=ctk.CTkFont(size=18, weight="bold")).pack(pady=10)
 
         self.fields_container = ctk.CTkScrollableFrame(self.data_frame, fg_color="transparent")
         self.fields_container.pack(expand=True, fill="both", padx=10)
@@ -151,6 +154,14 @@ class ImageViewerWindow(ctk.CTkToplevel):
                                           fg_color="#1f538d", text_color="white", font=ctk.CTkFont(weight="bold"),
                                           command=self.reprocess_image)
         self.reprocess_btn.pack(side="left", fill="x", expand=True, padx=(0, 5))
+
+        self.view_log_btn = ctk.CTkButton(self.action_frame, text="View Log", width=80, 
+                                         fg_color="#5a5a5a", command=self.view_log)
+        self.view_log_btn.pack(side="left", padx=(0, 5))
+
+        self.delete_btn = ctk.CTkButton(self.action_frame, text="Delete", width=80, 
+                                       fg_color="#b22222", hover_color="#8b0000", command=self.delete_current_item)
+        self.delete_btn.pack(side="left", padx=(0, 5))
 
         self.settings_btn = ctk.CTkButton(self.action_frame, text=f"⚙\n{fmt(KEY_MAP['viewer_settings'])}", width=40, 
                                          fg_color="#4a4a4a", command=self.open_model_settings)
@@ -168,6 +179,14 @@ class ImageViewerWindow(ctk.CTkToplevel):
         self.next_btn = ctk.CTkButton(self.nav_frame, text=f"Next >\n{fmt(KEY_MAP['viewer_next'])}", width=80, command=self.next_item)
         self.next_btn.pack(side="right")
 
+        # Toast notification label
+        self.toast_label = ctk.CTkLabel(self.data_frame, text="", text_color="#28a745", font=ctk.CTkFont(weight="bold"))
+        self.toast_label.pack(side="bottom", pady=5)
+
+    def show_toast(self, message, color="#28a745"):
+        self.toast_label.configure(text=message, text_color=color)
+        self.after(2000, lambda: self.toast_label.configure(text=""))
+
     def browse_output_dir(self):
         from tkinter import filedialog
         new_dir = filedialog.askdirectory(initialdir=self.output_dir)
@@ -182,6 +201,63 @@ class ImageViewerWindow(ctk.CTkToplevel):
             self.dir_label.configure(text=f"Dir: {os.path.basename(self.output_dir)}")
             self.handler = ResultDataHandler(csv_path, self.output_dir)
             self.load_current_item()
+        self.focus_set()
+
+    def delete_current_item(self):
+        item = self.handler.get_current_item()
+        if not item: return
+        
+        if not messagebox.askyesno("Confirm Delete", "Are you sure you want to delete this item?\nThis will remove the image, the log, and the CSV entry."):
+            self.focus_set()
+            return
+            
+        try:
+            # 1. Delete Image
+            img_path = self.handler.get_image_path(item)
+            if img_path and os.path.exists(img_path):
+                os.remove(img_path)
+            
+            # 2. Delete Log
+            image_name = item.get('processed_image_name', '').strip()
+            if image_name:
+                log_base = os.path.splitext(image_name)[0]
+                log_path = os.path.join(self.output_dir, "logs", f"{log_base}.txt")
+                if os.path.exists(log_path):
+                    os.remove(log_path)
+            
+            # 3. Delete from CSV/Internal List
+            idx = self.handler.current_index
+            if self.handler.delete_item(idx):
+                self.show_toast("Item Deleted", color="#dc3545")
+                self.load_current_item()
+            
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to delete item: {e}")
+            
+        self.focus_set()
+
+    def view_log(self):
+        item = self.handler.get_current_item()
+        if not item: return
+        
+        image_name = item.get('processed_image_name', '').strip()
+        if not image_name: return
+        
+        log_base = os.path.splitext(image_name)[0]
+        log_path = os.path.join(self.output_dir, "logs", f"{log_base}.txt")
+        
+        if os.path.exists(log_path):
+            try:
+                if os.name == 'nt': # Windows
+                    os.startfile(log_path)
+                else: # macOS/Linux
+                    import subprocess
+                    opener = "open" if os.uname().sysname == "Darwin" else "xdg-open"
+                    subprocess.call([opener, log_path])
+            except Exception as e:
+                messagebox.showerror("Error", f"Could not open log file: {e}")
+        else:
+            messagebox.showinfo("Not Found", f"Log file not found at:\n{log_path}\n\nEnsure 'dump_text_flow' is enabled in settings.")
         self.focus_set()
 
     def open_model_settings(self):
@@ -223,7 +299,18 @@ class ImageViewerWindow(ctk.CTkToplevel):
 
     def load_current_item(self):
         item = self.handler.get_current_item()
-        if not item: return
+        if not item: 
+            self.count_label.configure(text="No results found")
+            return
+            
+        # Update image count
+        total = len(self.handler.results)
+        current = self.handler.current_index + 1
+        self.count_label.configure(text=f"Image {current} of {total}")
+        
+        # Save state
+        self.handler.save_last_index()
+
         self.current_rotation = 0
         img_path = self.handler.get_image_path(item)
         if img_path and os.path.exists(img_path):
@@ -233,11 +320,15 @@ class ImageViewerWindow(ctk.CTkToplevel):
             except: pass
         for widget in self.fields_container.winfo_children(): widget.destroy()
         self.entries = {}
+        
+        # Larger font for entries
+        entry_font = ctk.CTkFont(size=30)
+        
         for key, value in item.items():
             if key == "processed_image_name": continue
-            f = ctk.CTkFrame(self.fields_container, fg_color="transparent"); f.pack(fill="x", pady=2)
-            ctk.CTkLabel(f, text=f"{key}:", font=ctk.CTkFont(weight="bold")).pack(side="top", anchor="w")
-            e = ctk.CTkEntry(f); e.insert(0, str(value)); e.pack(side="top", fill="x"); self.entries[key] = e
+            f = ctk.CTkFrame(self.fields_container, fg_color="transparent"); f.pack(fill="x", pady=5)
+            ctk.CTkLabel(f, text=f"{key}:", font=ctk.CTkFont(weight="bold", size=13)).pack(side="top", anchor="w")
+            e = ctk.CTkEntry(f, font=entry_font); e.insert(0, str(value)); e.pack(side="top", fill="x", pady=(2, 0)); self.entries[key] = e
             
         # Focus the 'category' entry if it exists
         if "category" in self.entries:
@@ -250,7 +341,10 @@ class ImageViewerWindow(ctk.CTkToplevel):
         self.reprocess_btn.configure(state="disabled", text="Processing...")
         from src.core.coordinator import PipelineCoordinator
         from src.utils.threading import run_in_background
-        coord = PipelineCoordinator()
+        
+        # Use the current output directory from the viewer
+        coord = PipelineCoordinator(output_dir=self.output_dir)
+        
         def on_fin(res):
             def _update():
                 self.reprocess_btn.configure(state="normal", text=f"Re-process with AI\n[A]")
@@ -266,7 +360,8 @@ class ImageViewerWindow(ctk.CTkToplevel):
                     messagebox.showerror("Error", "Reprocessing failed.")
                 self.focus_set()
             self.after(0, _update)
-        run_in_background(coord.extract_data, img_path, model_overrides=self.model_overrides, callback=on_fin)
+            
+        run_in_background(coord.process_image, img_path, callback=on_fin)
 
     def auto_crop(self):
         item = self.handler.get_current_item(); 
@@ -294,7 +389,7 @@ class ImageViewerWindow(ctk.CTkToplevel):
         img_path = self.handler.get_image_path(item)
         if messagebox.askyesno("Confirm", "Overwrite original?"):
             if ImageProcessingService.save_image(self.pil_image, img_path): 
-                messagebox.showinfo("Saved", "Image saved.")
+                self.show_toast("Image Saved ✓")
         self.focus_set()
 
     def rotate_image(self):
@@ -302,8 +397,19 @@ class ImageViewerWindow(ctk.CTkToplevel):
     def reset_view(self):
         if self.pil_image: self.canvas.set_image(self.pil_image)
     def save_edits(self):
-        if self.handler.save_edit(self.handler.current_index, {k: v.get() for k, v in self.entries.items()}):
-            messagebox.showinfo("Saved", "Data updated.")
+        idx = self.handler.current_index
+        new_data = {k: v.get() for k, v in self.entries.items()}
+        
+        # Handle renaming files if category or id changed
+        new_cat = new_data.get('category', 'UNKNOWN')
+        new_id = new_data.get('id', 'UNKNOWN')
+        
+        # Rename files on disk first
+        updated_name = self.handler.rename_item_files(idx, new_cat, new_id)
+        
+        # Then save all fields to CSV
+        if self.handler.save_edit(idx, new_data):
+            self.show_toast("Data & Files Updated ✓")
         self.focus_set()
     def next_item(self):
         if self.handler.next_item(): self.load_current_item()

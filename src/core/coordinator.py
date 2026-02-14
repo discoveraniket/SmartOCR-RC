@@ -44,20 +44,25 @@ class PipelineCoordinator:
                 
                 # Dump text flow to audit log if enabled
                 if config.OCR_SETTINGS.get("dump_text_flow", False):
-                    self._dump_text_flow(image_path, result)
+                    # Use the final processed image name for the log file to match perfectly
+                    final_name = final_data.get('processed_image_name')
+                    if final_name:
+                        log_base = os.path.splitext(final_name)[0]
+                        self._dump_text_flow(image_path, result, log_base)
                 
                 return {"data": final_data, "metrics": metrics}
         return None
 
-    def _dump_text_flow(self, image_path: str, result: dict):
+    def _dump_text_flow(self, image_path: str, result: dict, log_base: str):
         """Dumps the text data flow (OCR + LLM) to a text file for auditing."""
         try:
-            base_name = os.path.splitext(os.path.basename(image_path))[0]
-            log_filename = f"{base_name}_flow.txt"
+            log_filename = f"{log_base}.txt"
             log_path = os.path.join(self.log_dir, log_filename)
             
             content = []
             content.append(f"SOURCE IMAGE: {image_path}")
+            content.append(f"FINAL NAME: {log_base}")
+            
             content.append("\n" + "="*50)
             content.append("1. RAW OCR TEXT")
             content.append("="*50)
