@@ -40,7 +40,7 @@ FACTORY_DEFAULTS = {
     "LLM_SETTINGS": {
         "step1_model": "deepseek-r1:8b",
         "text_to_JSON_model": "deepseek-r1:8b",
-        "available_models": ["deepseek-r1:8b", "llama3.2:3b"],
+        "available_models": ["deepseek-r1:8b", "llama3.2:3b", "richardyoung/olmocr2:7b-q8"],
         "models_path": r"D:\LLMs\models",
         "max_loaded_models": "3",
         "keep_alive": "5m"

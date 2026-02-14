@@ -16,11 +16,11 @@
         "crop_padding": 100,
         "auto_crop": true,
         "dump_text_flow": true,
-        "default_input_dir": "data",
-        "default_output_dir": "output"
+        "default_input_dir": "D:/Desktop/Duck/Input",
+        "default_output_dir": "D:/Desktop/Duck/Output"
     },
     "LLM_SETTINGS": {
-        "step1_model": "deepseek-r1:8b",
+        "step1_model": "richardyoung/olmocr2:7b-q8",
         "text_to_JSON_model": "deepseek-r1:8b",
         "models_path": "D:\\LLMs\\models",
         "max_loaded_models": "3",
