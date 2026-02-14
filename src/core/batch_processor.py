@@ -56,16 +56,27 @@ class BatchProcessor:
             return
 
         image_path = self.queue.get()
+        item_start = time.time()
+        
+        # We need to wrap the coordinator's internal steps to get fine-grained timing
+        # For now, we'll measure the total time and pass it back
         
         def on_item_finished(result):
-            if result:
+            item_end = time.time()
+            total_duration = round(item_end - item_start, 2)
+            
+            last_speeds = {"total": total_duration}
+            
+            if result and isinstance(result, dict) and "metrics" in result:
+                self.processed_count += 1
+                last_speeds.update(result["metrics"])
+            elif result:
                 self.processed_count += 1
             else:
                 self.error_count += 1
-                # Log error details here if needed
             
             # Send update to UI
-            progress_callback(self.get_stats(), current_file=os.path.basename(image_path))
+            progress_callback(self.get_stats(), current_file=os.path.basename(image_path), last_speeds=last_speeds)
             
             # Process next item
             self.process_next(progress_callback, completion_callback)

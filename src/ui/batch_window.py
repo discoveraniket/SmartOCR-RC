@@ -1,10 +1,28 @@
 import customtkinter as ctk
 import os
+import time
 from tkinter import filedialog, messagebox
 import logging
 from src.core.batch_processor import BatchProcessor
 
 logger = logging.getLogger(__name__)
+
+class TextboxHandler(logging.Handler):
+    def __init__(self, textbox):
+        super().__init__()
+        self.textbox = textbox
+
+    def emit(self, record):
+        msg = self.format(record)
+        def append():
+            try:
+                self.textbox.configure(state="normal")
+                self.textbox.insert("end", msg + "\n")
+                self.textbox.see("end")
+                self.textbox.configure(state="disabled")
+            except:
+                pass
+        self.textbox.after(0, append)
 
 class BatchWindow(ctk.CTkToplevel):
     def __init__(self, parent):
@@ -13,13 +31,15 @@ class BatchWindow(ctk.CTkToplevel):
         self.title("Overnight Batch Processing")
         self.geometry("1000x850")
         
-        self.after(100, self.lift)
-        self.focus()
-
+        # Ensure it stays on top of the parent and gets focus
+        self.transient(parent)
+        self.grab_set()
+        
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(2, weight=1) # Log area takes expansion
 
         self.processor = None
+        self.log_handler = None
 
         self.setup_config_ui()
         self.setup_progress_ui()
@@ -85,8 +105,11 @@ class BatchWindow(ctk.CTkToplevel):
         self.eta_label = ctk.CTkLabel(self.progress_frame, text="ETA: --:--:-- | Elapsed: 00:00:00")
         self.eta_label.grid(row=3, column=0, padx=20, pady=5)
 
+        self.speed_label = ctk.CTkLabel(self.progress_frame, text="OCR1 Speed: --s | Model1: --s | text to JSON: --s", font=ctk.CTkFont(weight="bold"))
+        self.speed_label.grid(row=4, column=0, padx=20, pady=5)
+
         self.current_file_label = ctk.CTkLabel(self.progress_frame, text="Current: Waiting...", font=ctk.CTkFont(slant="italic"))
-        self.current_file_label.grid(row=4, column=0, padx=20, pady=5)
+        self.current_file_label.grid(row=5, column=0, padx=20, pady=5)
 
     def setup_log_ui(self):
         self.log_frame = ctk.CTkFrame(self)
@@ -98,6 +121,12 @@ class BatchWindow(ctk.CTkToplevel):
         
         self.log_textbox = ctk.CTkTextbox(self.log_frame, height=200)
         self.log_textbox.grid(row=1, column=0, padx=10, pady=10, sticky="nsew")
+        self.log_textbox.configure(state="disabled")
+
+        # Attach logging handler
+        self.log_handler = TextboxHandler(self.log_textbox)
+        self.log_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s', '%H:%M:%S'))
+        logging.getLogger().addHandler(self.log_handler)
 
     def setup_controls_ui(self):
         self.controls_frame = ctk.CTkFrame(self, fg_color="transparent")
@@ -116,25 +145,31 @@ class BatchWindow(ctk.CTkToplevel):
             entry.insert(0, directory)
 
     def log(self, message):
-        self.log_textbox.insert("end", f"{message}\n")
+        self.log_textbox.configure(state="normal")
+        self.log_textbox.insert("end", f">>> {message}\n")
         self.log_textbox.see("end")
+        self.log_textbox.configure(state="disabled")
 
     def format_time(self, seconds):
         if seconds < 0: return "--:--:--"
         return time.strftime('%H:%M:%S', time.gmtime(seconds))
 
-    def update_ui(self, stats, current_file=None):
+    def update_ui(self, stats, current_file=None, last_speeds=None):
         self.progress_bar.set(stats["progress"])
         self.stats_label.configure(text=f"Total: {stats['total']} | Processed: {stats['processed']} | Remaining: {stats['remaining']} | Errors: {stats['errors']}")
         
-        import time
         eta_str = self.format_time(stats["eta"])
         elapsed_str = self.format_time(stats["elapsed"])
         self.eta_label.configure(text=f"ETA: {eta_str} | Elapsed: {elapsed_str}")
         
+        if last_speeds:
+            ocr = last_speeds.get('ocr', '--')
+            m1 = last_speeds.get('step1', '--')
+            json_speed = last_speeds.get('json', '--')
+            self.speed_label.configure(text=f"OCR1 Speed: {ocr}s | Model1: {m1}s | text to JSON: {json_speed}s")
+            
         if current_file:
             self.current_file_label.configure(text=f"Current: {current_file}")
-            self.log(f"Finished: {current_file}")
 
     def start_session(self):
         input_dir = self.input_entry.get()
@@ -190,8 +225,13 @@ class BatchWindow(ctk.CTkToplevel):
         self.log(f"Total Errors: {stats['errors']}")
         messagebox.showinfo("Session Complete", "Batch processing has finished.")
 
+    def destroy(self):
+        # Clean up logging handler
+        if self.log_handler:
+            logging.getLogger().removeHandler(self.log_handler)
+        super().destroy()
+
 if __name__ == "__main__":
-    import time
     root = ctk.CTk()
     bw = BatchWindow(root)
     root.mainloop()

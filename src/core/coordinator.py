@@ -25,6 +25,7 @@ class PipelineCoordinator:
 
     def process_image(self, image_path: str):
         self.logger.info(f"--- Processing: {image_path} ---")
+        metrics = {}
         
         base_name = os.path.splitext(os.path.basename(image_path))[0]
         audit_log_path = os.path.join(self.log_dir, f"{base_name}_output.txt")
@@ -33,49 +34,38 @@ class PipelineCoordinator:
         start_time = time.time()
         raw_ocr = self.ocr_engine.run_inference(image_path)
         ocr_results = self.ocr_processor.process_paddle_output(raw_ocr)
+        metrics['ocr'] = round(time.time() - start_time, 2)
         
         if not ocr_results:
             self.logger.warning(f"No text extracted from {image_path}")
-            return
+            return None
         
-        # Format for audit log (Detailed with coordinates)
+        # ... (logging code remains same)
         spatial_log = LogFormatter.format_ocr_spatial_data(ocr_results)
         TextFileHandler.write(audit_log_path, spatial_log)
         
-        # Format for LLM (Clean text only)
         full_text = "\n".join([item['text'] for item in ocr_results])
-        
-        # Log the EXACT prompt and text sent to the LLM
-        llm_input_audit = (
-            "\n" + "="*30 + "\n"
-            "EXACT INPUT SENT TO LLM (STEP 1)\n" + 
-            "="*30 + "\n" +
-            f"{config.STANDARD_PROMPT}\n\n"
-            f"OCR_TEXT:\n{full_text}\n" +
-            "="*30 + "\n"
-        )
-        TextFileHandler.append(audit_log_path, llm_input_audit)
-        
-        self.logger.info(f"OCR finished in {time.time() - start_time:.2f}s")
+        self.logger.info(f"OCR finished in {metrics['ocr']}s")
 
         # 2. LLM Cleaning Stage
         if not OllamaServiceManager.ensure_running():
             self.logger.error("Ollama service is not available.")
-            return
+            return None
 
         clean_model = config.LLM_SETTINGS.get("step1_model")
         prompt = f"{config.STANDARD_PROMPT}OCR_TEXT:{full_text}"
         
         start_time = time.time()
         clean_result = self.llm_engine.generate_response(clean_model, prompt, think=False)
+        metrics['step1'] = round(time.time() - start_time, 2)
         
         if not clean_result:
-            return
+            return None
         
         # Append cleaning result to audit log
         formatted_clean = LogFormatter.format_llm_result(clean_result)
         TextFileHandler.append(audit_log_path, formatted_clean)
-        self.logger.info(f"Cleaning finished in {time.time() - start_time:.2f}s")
+        self.logger.info(f"Cleaning finished in {metrics['step1']}s")
 
         # 3. Text to JSON Stage
         json_model = config.LLM_SETTINGS.get("text_to_JSON_model")
@@ -83,17 +73,21 @@ class PipelineCoordinator:
         
         start_time = time.time()
         json_result = self.llm_engine.generate_response(json_model, json_prompt, format="json")
+        metrics['json'] = round(time.time() - start_time, 2)
         
         if not json_result:
-            return
+            return None
 
         # Append JSON result to audit log
         formatted_json = LogFormatter.format_llm_result(json_result)
         TextFileHandler.append(audit_log_path, formatted_json)
-        self.logger.info(f"JSON conversion finished in {time.time() - start_time:.2f}s")
+        self.logger.info(f"JSON conversion finished in {metrics['json']}s")
 
-        # 4. Finalize Data (CSV and Image Copy)
-        return self._finalize_output(image_path, json_result['answer'])
+        # 4. Finalize Data
+        data = self._finalize_output(image_path, json_result['answer'])
+        if data:
+            return {"data": data, "metrics": metrics}
+        return None
 
     def _finalize_output(self, original_image_path: str, json_string: str):
         try:
