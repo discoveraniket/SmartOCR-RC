@@ -33,7 +33,6 @@ class BatchWindow(ctk.CTkToplevel):
         
         # Ensure it stays on top of the parent and gets focus
         self.transient(parent)
-        self.grab_set()
         
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(2, weight=1) # Log area takes expansion

@@ -236,22 +236,16 @@ class Dashboard(ctk.CTk):
         messagebox.showinfo("Success", "Settings saved successfully! Restart application for some changes to take effect.")
 
     def open_batch_window(self):
-        self.withdraw()  # Hide the dashboard
+        if hasattr(self, "batch_window") and self.batch_window.winfo_exists():
+            self.batch_window.focus()
+            return
         self.batch_window = BatchWindow(self)
-        self.batch_window.protocol("WM_DELETE_WINDOW", self.on_batch_window_close)
-
-    def on_batch_window_close(self):
-        self.batch_window.destroy()
-        self.deiconify()  # Show the dashboard again
 
     def open_viewer_window(self):
-        self.withdraw()
+        if hasattr(self, "viewer_window") and self.viewer_window.winfo_exists():
+            self.viewer_window.focus()
+            return
         self.viewer_window = ImageViewerWindow(self)
-        self.viewer_window.protocol("WM_DELETE_WINDOW", self.on_viewer_window_close)
-
-    def on_viewer_window_close(self):
-        self.viewer_window.destroy()
-        self.deiconify()
 
     def change_appearance_mode_event(self, new_appearance_mode: str):
         ctk.set_appearance_mode(new_appearance_mode)

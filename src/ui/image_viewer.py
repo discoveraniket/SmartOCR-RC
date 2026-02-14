@@ -70,7 +70,6 @@ class ImageViewerWindow(ctk.CTkToplevel):
         self.title("Result Image Viewer & Editor")
         self.geometry("1400x950")
         self.transient(parent)
-        self.grab_set()
 
         from src.utils.config import OCR_SETTINGS, LLM_SETTINGS
         base_dir = os.path.dirname(os.path.abspath(__file__))

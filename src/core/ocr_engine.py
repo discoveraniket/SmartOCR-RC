@@ -38,10 +38,12 @@ class OCRResultProcessor:
 class OcrEngine:
     """Wrapper for the underlying OCR library (PaddleOCR)."""
     
-    def __init__(self):
-        """Initialize PaddleOCR with settings from config."""
+    def __init__(self, **overrides):
+        """Initialize PaddleOCR with settings from config, allowing overrides."""
         try:
-            self.client = PaddleOCR(**config.OCR_SETTINGS)
+            settings = config.OCR_SETTINGS.copy()
+            settings.update(overrides)
+            self.client = PaddleOCR(**settings)
         except Exception as e:
             logger.error(f"Failed to initialize PaddleOCR engine: {e}")
             raise

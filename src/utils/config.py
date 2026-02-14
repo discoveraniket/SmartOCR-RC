@@ -22,7 +22,8 @@ FACTORY_DEFAULTS = {
         "rec_image_shape": "3, 48, 320",
         "default_input_dir": "data",
         "default_output_dir": "output",
-        "crop_padding": 20
+        "crop_padding": 20,
+        "auto_crop": True
     },
     "KEY_MAP": {
         "viewer_next": "<Control-Right>",
