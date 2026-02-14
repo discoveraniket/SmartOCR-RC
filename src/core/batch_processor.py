@@ -58,9 +58,10 @@ class BatchProcessor:
         image_path = self.queue.get()
         item_start = time.time()
         
-        # We need to wrap the coordinator's internal steps to get fine-grained timing
-        # For now, we'll measure the total time and pass it back
-        
+        def on_step(metrics):
+            # Pass intermediate metrics to UI
+            progress_callback(self.get_stats(), current_file=os.path.basename(image_path), last_speeds=metrics)
+
         def on_item_finished(result):
             item_end = time.time()
             total_duration = round(item_end - item_start, 2)
@@ -75,13 +76,13 @@ class BatchProcessor:
             else:
                 self.error_count += 1
             
-            # Send update to UI
+            # Send final update for this item to UI
             progress_callback(self.get_stats(), current_file=os.path.basename(image_path), last_speeds=last_speeds)
             
             # Process next item
             self.process_next(progress_callback, completion_callback)
 
-        run_in_background(self.coordinator.process_image, image_path, callback=on_item_finished)
+        run_in_background(self.coordinator.process_image, image_path, step_callback=on_step, callback=on_item_finished)
 
     def start(self, progress_callback, completion_callback):
         """Starts the batch process."""

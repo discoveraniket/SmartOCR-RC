@@ -60,10 +60,11 @@ class MainWindow(tk.Tk):
         # Run in background to keep UI responsive
         run_in_background(self.coordinator.process_image, self.selected_path, callback=self.on_processing_finished)
 
-    def on_processing_finished(self, result):
+    def on_processing_finished(self, result_wrapper):
         self.status_var.set("Processing Complete")
         self.process_btn.config(state=tk.NORMAL)
-        if result:
+        if result_wrapper and "data" in result_wrapper:
+            result = result_wrapper["data"]
             messagebox.showinfo("Success", f"Processing finished successfully!\nCategory: {result.get('category')}\nID: {result.get('id')}")
         else:
             messagebox.showerror("Error", "Processing failed. Check logs for details.")

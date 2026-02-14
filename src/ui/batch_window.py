@@ -104,7 +104,7 @@ class BatchWindow(ctk.CTkToplevel):
         self.eta_label = ctk.CTkLabel(self.progress_frame, text="ETA: --:--:-- | Elapsed: 00:00:00")
         self.eta_label.grid(row=3, column=0, padx=20, pady=5)
 
-        self.speed_label = ctk.CTkLabel(self.progress_frame, text="OCR1 Speed: --s | Model1: --s | text to JSON: --s", font=ctk.CTkFont(weight="bold"))
+        self.speed_label = ctk.CTkLabel(self.progress_frame, text="OCR (Det: --s | Rec: --s) | Model1: --s | JSON: --s", font=ctk.CTkFont(weight="bold"))
         self.speed_label.grid(row=4, column=0, padx=20, pady=5)
 
         self.current_file_label = ctk.CTkLabel(self.progress_frame, text="Current: Waiting...", font=ctk.CTkFont(slant="italic"))
@@ -154,21 +154,27 @@ class BatchWindow(ctk.CTkToplevel):
         return time.strftime('%H:%M:%S', time.gmtime(seconds))
 
     def update_ui(self, stats, current_file=None, last_speeds=None):
-        self.progress_bar.set(stats["progress"])
-        self.stats_label.configure(text=f"Total: {stats['total']} | Processed: {stats['processed']} | Remaining: {stats['remaining']} | Errors: {stats['errors']}")
-        
-        eta_str = self.format_time(stats["eta"])
-        elapsed_str = self.format_time(stats["elapsed"])
-        self.eta_label.configure(text=f"ETA: {eta_str} | Elapsed: {elapsed_str}")
-        
-        if last_speeds:
-            ocr = last_speeds.get('ocr', '--')
-            m1 = last_speeds.get('step1', '--')
-            json_speed = last_speeds.get('json', '--')
-            self.speed_label.configure(text=f"OCR1 Speed: {ocr}s | Model1: {m1}s | text to JSON: {json_speed}s")
-            
-        if current_file:
-            self.current_file_label.configure(text=f"Current: {current_file}")
+        def _update():
+            try:
+                self.progress_bar.set(stats["progress"])
+                self.stats_label.configure(text=f"Total: {stats['total']} | Processed: {stats['processed']} | Remaining: {stats['remaining']} | Errors: {stats['errors']}")
+                
+                eta_str = self.format_time(stats["eta"])
+                elapsed_str = self.format_time(stats["elapsed"])
+                self.eta_label.configure(text=f"ETA: {eta_str} | Elapsed: {elapsed_str}")
+                
+                if last_speeds:
+                    det = last_speeds.get('ocr_det', '--')
+                    rec = last_speeds.get('ocr_rec', '--')
+                    m1 = last_speeds.get('step1', '--')
+                    json_speed = last_speeds.get('json', '--')
+                    self.speed_label.configure(text=f"OCR (Det: {det}s | Rec: {rec}s) | Model1: {m1}s | JSON: {json_speed}s")
+                    
+                if current_file:
+                    self.current_file_label.configure(text=f"Current: {current_file}")
+            except:
+                pass
+        self.after(0, _update)
 
     def start_session(self):
         input_dir = self.input_entry.get()

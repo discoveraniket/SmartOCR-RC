@@ -205,6 +205,8 @@ class Dashboard(ctk.CTk):
             "cpu_threads": "Number of CPU threads to use.",
             "rec_image_shape": "Input shape for the recognition model.",
             "crop_padding": "Padding (in pixels) added around the text area during auto-crop.",
+            "auto_crop": "Automatically crop the image to text areas for better accuracy.",
+            "dump_text_flow": "Save raw and cleaned text to a .txt file in output/logs for auditing.",
             "step1_model": "Ollama model used for initial text cleaning/reasoning.",
             "text_to_JSON_model": "Ollama model used for final data extraction.",
             "models_path": "Local path where LLM models are stored.",

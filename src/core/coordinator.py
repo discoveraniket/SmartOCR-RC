@@ -34,29 +34,71 @@ class PipelineCoordinator:
         self.log_dir = os.path.join(self.output_dir, "logs")
         self.csv_path = os.path.join(self.output_dir, "results.csv")
 
-    def process_image(self, image_path: str):
-        result = self.extract_data(image_path)
+    def process_image(self, image_path: str, step_callback: callable = None):
+        result = self.extract_data(image_path, step_callback=step_callback)
         if result:
-            return self._finalize_output(image_path, result['json_answer'], result.get('cropped_pil'))
+            final_data = self._finalize_output(image_path, result['json_answer'], result.get('cropped_pil'))
+            if final_data:
+                metrics = result.get('metrics', {})
+                self.logger.info(f"Finished. Timings - Det: {metrics.get('ocr_det')}s | Rec: {metrics.get('ocr_rec')}s | Step1: {metrics.get('step1')}s | JSON: {metrics.get('json')}s")
+                
+                # Dump text flow to audit log if enabled
+                if config.OCR_SETTINGS.get("dump_text_flow", False):
+                    self._dump_text_flow(image_path, result)
+                
+                return {"data": final_data, "metrics": metrics}
         return None
 
-    def extract_data(self, image_path: str, model_overrides: dict = None):
+    def _dump_text_flow(self, image_path: str, result: dict):
+        """Dumps the text data flow (OCR + LLM) to a text file for auditing."""
+        try:
+            base_name = os.path.splitext(os.path.basename(image_path))[0]
+            log_filename = f"{base_name}_flow.txt"
+            log_path = os.path.join(self.log_dir, log_filename)
+            
+            content = []
+            content.append(f"SOURCE IMAGE: {image_path}")
+            content.append("\n" + "="*50)
+            content.append("1. RAW OCR TEXT")
+            content.append("="*50)
+            content.append(result.get('raw_text', ''))
+            
+            content.append("\n" + "="*50)
+            content.append("2. LLM CLEANED TEXT")
+            content.append("="*50)
+            content.append(result.get('cleaned_text', ''))
+            
+            content.append("\n" + "="*50)
+            content.append("3. FINAL JSON OUTPUT")
+            content.append("="*50)
+            content.append(result.get('json_answer', ''))
+            
+            TextFileHandler.write(log_path, "\n".join(content))
+        except Exception as e:
+            self.logger.error(f"Failed to dump text flow: {e}")
+
+    def extract_data(self, image_path: str, model_overrides: dict = None, step_callback: callable = None):
         """Runs OCR and LLM stages. Supports optional auto-cropping."""
-        self.logger.info(f"--- Extracting Data: {image_path} ---")
+        self.logger.info(f"--- Processing: {os.path.basename(image_path)} ---")
         metrics = {}
         overrides = model_overrides or {}
         
         # 1. OCR Stage (Initial Detection - Fast Pass)
-        start_time = time.time()
+        start_time_det = time.time()
         raw_ocr = self.det_engine.run_inference(image_path)
         ocr_results = self.ocr_processor.process_paddle_output(raw_ocr)
+        metrics['ocr_det'] = round(time.time() - start_time_det, 2)
+        self.logger.info(f"OCR Detection took: {metrics['ocr_det']}s")
+        if step_callback: step_callback(metrics)
         
+        metrics['ocr_rec'] = 0
         final_ocr_results = ocr_results
         cropped_pil = None
 
         # 2. Auto-Crop logic
         if config.OCR_SETTINGS.get("auto_crop", False) and ocr_results:
             self.logger.info("Applying auto-crop for better accuracy...")
+            start_time_rec = time.time()
             # Use default padding + 50 extra as requested
             padding = int(config.OCR_SETTINGS.get("crop_padding", 20)) + 50
             bounds = ImageProcessingService.calculate_text_bounds(ocr_results, padding=padding)
@@ -73,16 +115,23 @@ class PipelineCoordinator:
                 final_ocr_results = self.ocr_processor.process_paddle_output(raw_ocr_crop)
                 
                 self.logger.info("Re-ran OCR on cropped image.")
+            
+            metrics['ocr_rec'] = round(time.time() - start_time_rec, 2)
+            self.logger.info(f"OCR Recognition took: {metrics['ocr_rec']}s")
+            if step_callback: step_callback(metrics)
         
-        metrics['ocr'] = round(time.time() - start_time, 2)
+        # Total OCR metric for UI compatibility
+        metrics['ocr'] = round(metrics['ocr_det'] + metrics['ocr_rec'], 2)
         
         if not final_ocr_results:
+            self.logger.warning("No OCR results found.")
             return None
         
         full_text = "\n".join([item['text'] for item in final_ocr_results])
 
         # 3. LLM Cleaning Stage
         if not OllamaServiceManager.ensure_running():
+            self.logger.error("Ollama service not running.")
             return None
 
         clean_model = overrides.get("step1_model") or config.LLM_SETTINGS.get("step1_model")
@@ -91,9 +140,12 @@ class PipelineCoordinator:
         # Check for think override
         think_enabled = overrides.get("think", False)
         
-        start_time = time.time()
+        self.logger.info(f"Running LLM cleaning with model: {clean_model}...")
+        start_time_step1 = time.time()
         clean_result = self.llm_engine.generate_response(clean_model, prompt, think=think_enabled)
-        metrics['step1'] = round(time.time() - start_time, 2)
+        metrics['step1'] = round(time.time() - start_time_step1, 2)
+        self.logger.info(f"LLM Cleaning took: {metrics['step1']}s")
+        if step_callback: step_callback(metrics)
         
         if not clean_result:
             return None
@@ -102,17 +154,28 @@ class PipelineCoordinator:
         json_model = overrides.get("text_to_JSON_model") or config.LLM_SETTINGS.get("text_to_JSON_model")
         json_prompt = f"{config.TEXT_TO_JSON_PROMPT}TEXT:{clean_result['answer']}"
         
-        start_time = time.time()
+        self.logger.info(f"Running LLM JSON extraction with model: {json_model}...")
+        start_time_json = time.time()
         json_result = self.llm_engine.generate_response(json_model, json_prompt, format="json")
-        metrics['json'] = round(time.time() - start_time, 2)
+        metrics['json'] = round(time.time() - start_time_json, 2)
+        self.logger.info(f"LLM JSON extraction took: {metrics['json']}s")
+        if step_callback: step_callback(metrics)
         
         if not json_result:
             return None
 
         try:
             data = json.loads(json_result['answer'])
-            return {"data": data, "metrics": metrics, "json_answer": json_result['answer'], "cropped_pil": cropped_pil}
-        except:
+            return {
+                "data": data, 
+                "metrics": metrics, 
+                "json_answer": json_result['answer'], 
+                "cropped_pil": cropped_pil,
+                "raw_text": full_text,
+                "cleaned_text": clean_result['answer']
+            }
+        except Exception as e:
+            self.logger.error(f"Failed to parse LLM JSON output: {e}")
             return None
 
     def _finalize_output(self, original_image_path: str, json_string: str, cropped_pil: Image.Image = None):

@@ -9,7 +9,7 @@ FACTORY_DEFAULTS = {
     "OCR_SETTINGS": {
         "lang": "en",
         "use_angle_cls": True,
-        "show_log": False,
+        "show_log": True,
         "ocr_version": "PP-OCRv4",
         "use_gpu": False,
         "det_db_thresh": 0.3,
@@ -23,7 +23,8 @@ FACTORY_DEFAULTS = {
         "default_input_dir": "data",
         "default_output_dir": "output",
         "crop_padding": 20,
-        "auto_crop": True
+        "auto_crop": True,
+        "dump_text_flow": True
     },
     "KEY_MAP": {
         "viewer_next": "<Control-Right>",

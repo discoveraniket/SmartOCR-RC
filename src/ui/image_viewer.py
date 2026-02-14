@@ -209,30 +209,34 @@ class ImageViewerWindow(ctk.CTkToplevel):
         from src.utils.threading import run_in_background
         coord = PipelineCoordinator()
         def on_fin(res):
-            self.reprocess_btn.configure(state="normal", text=f"Re-process with AI\n[A]")
-            if res and "data" in res:
-                for k, v in self.entries.items():
-                    if k in res["data"]: v.delete(0, "end"); v.insert(0, str(res["data"][k]))
-                messagebox.showinfo("Success", "Extraction complete.")
-            else: messagebox.showerror("Error", "Reprocessing failed.")
+            def _update():
+                self.reprocess_btn.configure(state="normal", text=f"Re-process with AI\n[A]")
+                if res and "data" in res:
+                    for k, v in self.entries.items():
+                        if k in res["data"]: v.delete(0, "end"); v.insert(0, str(res["data"][k]))
+                    messagebox.showinfo("Success", "Extraction complete.")
+                else: messagebox.showerror("Error", "Reprocessing failed.")
+            self.after(0, _update)
         run_in_background(coord.extract_data, img_path, model_overrides=self.model_overrides, callback=on_fin)
 
     def auto_crop(self):
         item = self.handler.get_current_item(); 
         if not item or not self.pil_image: return
         img_path = self.handler.get_image_path(item)
-        self.crop_btn.configure(state="disabled", text="Cropping...")
         from src.core.ocr_engine import OcrEngine
         from src.utils.threading import run_in_background
         ocr = OcrEngine()
         def on_ocr_finished(raw):
-            self.crop_btn.configure(state="normal", text=f"Auto Crop\n[C]")
-            if not raw: return
-            results = raw[0] if raw else []
-            ocr_data = [{"box": line[0], "text": line[1][0]} for line in results]
-            from src.utils.config import OCR_SETTINGS
-            bounds = ImageProcessingService.calculate_text_bounds(ocr_data, padding=int(OCR_SETTINGS.get("crop_padding", 20)))
-            if bounds: self.pil_image = ImageProcessingService.crop_to_content(self.pil_image, bounds); self.canvas.set_image(self.pil_image)
+            def _update():
+                if not raw: return
+                results = raw[0] if raw else []
+                ocr_data = [{"box": line[0], "text": line[1][0]} for line in results]
+                from src.utils.config import OCR_SETTINGS
+                bounds = ImageProcessingService.calculate_text_bounds(ocr_data, padding=int(OCR_SETTINGS.get("crop_padding", 20)))
+                if bounds: 
+                    self.pil_image = ImageProcessingService.crop_to_content(self.pil_image, bounds)
+                    self.canvas.set_image(self.pil_image)
+            self.after(0, _update)
         run_in_background(ocr.run_inference, img_path, callback=on_ocr_finished)
 
     def save_current_image(self):
