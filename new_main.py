@@ -41,14 +41,30 @@ class PipelineCoordinator:
         # 1. OCR Stage
         start_time = time.time()
         raw_ocr = self.ocr_engine.run_inference(image_path)
-        lines = self.ocr_processor.process_paddle_output(raw_ocr)
+        ocr_results = self.ocr_processor.process_paddle_output(raw_ocr)
         
-        if not lines:
+        if not ocr_results:
             self.logger.warning(f"No text extracted from {image_path}")
             return
         
-        full_text = "".join(lines)
-        TextFileHandler.write(audit_log_path, full_text)
+        # Format for audit log (Detailed with coordinates)
+        spatial_log = LogFormatter.format_ocr_spatial_data(ocr_results)
+        TextFileHandler.write(audit_log_path, spatial_log)
+        
+        # Format for LLM (Clean text only)
+        full_text = "\n".join([item['text'] for item in ocr_results])
+        
+        # Log the EXACT prompt and text sent to the LLM
+        llm_input_audit = (
+            "\n" + "="*30 + "\n"
+            "EXACT INPUT SENT TO LLM (STEP 1)\n" + 
+            "="*30 + "\n" +
+            f"{config.STANDARD_PROMPT}\n\n"
+            f"OCR_TEXT:\n{full_text}\n" +
+            "="*30 + "\n"
+        )
+        TextFileHandler.append(audit_log_path, llm_input_audit)
+        
         self.logger.info(f"OCR finished in {time.time() - start_time:.2f}s")
 
         # 2. LLM Cleaning Stage

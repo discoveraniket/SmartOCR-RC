@@ -17,6 +17,21 @@ class DirectoryUtility:
 class LogFormatter:
     """Handles formatting of data for audit logs."""
     @staticmethod
+    def format_ocr_spatial_data(ocr_results: List[Dict[str, Any]]) -> str:
+        """Formats OCR results with coordinates and confidence for auditing."""
+        lines = [
+            "="*30,
+            "DETAILED OCR SPATIAL DATA",
+            "="*30,
+            f"{'TEXT':<40} | {'CONF':<6} | {'X,Y COORDS':<15}",
+            "-"*70
+        ]
+        for item in ocr_results:
+            pos = f"{int(item['x'])},{int(item['y'])}"
+            lines.append(f"{item['text']:<40} | {item['confidence']:.3f} | {pos}")
+        return "\n".join(lines) + "\n"
+
+    @staticmethod
     def format_llm_result(result: Dict[str, Any]) -> str:
         lines = [
             "\n" + "="*30,

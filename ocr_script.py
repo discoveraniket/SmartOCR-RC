@@ -3,23 +3,36 @@ import logging
 from typing import List, Any
 from paddleocr import PaddleOCR
 import config
+from typing import Dict, Any, List
 
 logger = logging.getLogger(__name__)
 
 class OCRResultProcessor:
-    """Handles the parsing and cleaning of raw OCR results."""
+    """Handles the parsing, reordering, and cleaning of raw OCR results."""
     
     @staticmethod
-    def process_paddle_output(result: Any) -> List[str]:
-        """Extracts plain text strings from PaddleOCR's nested list structure."""
-        extracted_text = []
-        if result and isinstance(result, list) and result[0]:
-            for line in result[0]:
-                # line format: [[coords], [text, confidence]]
-                if len(line) > 1 and len(line[1]) > 0:
-                    text = line[1][0]
-                    extracted_text.append(str(text))
-        return extracted_text
+    def process_paddle_output(result: Any) -> List[Dict[str, Any]]:
+        """Extracts text with spatial metadata (coordinates and confidence)."""
+        if not result or not isinstance(result, list) or not result[0]:
+            return []
+            
+        extracted_data = []
+        for line in result[0]:
+            if len(line) > 1:
+                box = line[0]  # [[x1, y1], [x2, y1], [x2, y2], [x1, y2]]
+                text = line[1][0]
+                conf = line[1][1]
+                extracted_data.append({
+                    "text": text, 
+                    "confidence": conf,
+                    "x": box[0][0], 
+                    "y": box[0][1],
+                    "box": box
+                })
+
+        # Sort primarily by Y (with 10px line grouping) and secondarily by X
+        extracted_data.sort(key=lambda r: (r['y'] // 10, r['x']))
+        return extracted_data
 
 class OcrEngine:
     """Wrapper for the underlying OCR library (PaddleOCR)."""

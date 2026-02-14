@@ -3,7 +3,17 @@
 OCR_SETTINGS = {
     "lang": "en",
     "use_angle_cls": True,
-    "show_log": False
+    "show_log": False,
+    "ocr_version": "PP-OCRv4",
+    "use_gpu": False,
+    "det_db_thresh": 0.3,
+    "det_db_box_thresh": 0.3,       # Lowered to capture faint text
+    "det_db_unclip_ratio": 2.0,     # Increased to prevent character clipping
+    "det_limit_side_len": 1500,     # Increased for high-res clarity
+    "drop_score": 0.05,             # Don't drop low confidence text, let LLM decide
+    "enable_mkldnn": True,
+    "cpu_threads": 4,
+    "rec_image_shape": "3, 48, 320"
 }
 
 LLM_SETTINGS = {
@@ -34,9 +44,10 @@ Extract specific data points from the provided OCR text and return them in a str
    - Extract the name (FirstName LastName) following this label.
 
 3. **Mobile Number**:
-   - Locate a 10-digit Indian mobile number. Sometimes OCR variation  introduce letter or alter the digit count. if it is at the end of the file, predict it as mobile number.
-   - This is typically positioned toward the end of the text string. 
-   - Ensure the output is digits only.
+    - **Location**: Most likely found in the final 20% of the text or the last few lines
+    - **OCR Correction**:
+    - Replace common character misreads: 'or 'o' -> '0', 'I' or 'l' -> '1', 'S' -> '5, 'B' -> '8'.
+    - **Digit Count**: If the count is slightly off (e.g., 9 or 11 digits), use surrounding context to determine if a digit was missed or added by OCR and normalize it to 10 digits if possible; dont return null.
 
 ### CONSTRAINTS
 - **No Dummy Data**: If a field is not found, return `null`. Do not invent placeholders.
@@ -52,7 +63,14 @@ Extract specific data points from the provided OCR text and return them in a str
 }
 """
 
-
+# 3. **Mobile Number**:
+#    - Locate a 10-digit Indian mobile number. Sometimes OCR variation  introduce letter or alter the digit count. if it is at the end of the file, predict it as mobile number.
+#    - This is typically positioned toward the end of the text string. 
+#    - Ensure the output is digits only.
+# 3. **Mobile Number**:
+#    - Locate a 10-digit Indian mobile number.Focus your search on the last 3-4 line of the provided OCR_TEXT.
+#    - Look for a 10-digit sequence.
+#    - Even if OCR has inserted letters (e.g."Mobi1e: 987O54321O"), correct it to exact 10 digits only.
 
 
 
