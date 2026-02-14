@@ -5,6 +5,7 @@ import logging
 from tkinter import filedialog
 from src.utils.threading import run_in_background
 from src.ui.batch_window import BatchWindow
+from src.ui.image_viewer import ImageViewerWindow
 
 logger = logging.getLogger(__name__)
 
@@ -243,7 +244,13 @@ class Dashboard(ctk.CTk):
         self.deiconify()  # Show the dashboard again
 
     def open_viewer_window(self):
-        print("Opening Image Viewer Window...")
+        self.withdraw()
+        self.viewer_window = ImageViewerWindow(self)
+        self.viewer_window.protocol("WM_DELETE_WINDOW", self.on_viewer_window_close)
+
+    def on_viewer_window_close(self):
+        self.viewer_window.destroy()
+        self.deiconify()
 
     def change_appearance_mode_event(self, new_appearance_mode: str):
         ctk.set_appearance_mode(new_appearance_mode)
