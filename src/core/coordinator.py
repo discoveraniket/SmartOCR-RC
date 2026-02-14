@@ -1,22 +1,13 @@
 import logging
-import sys
 import time
 import os
 import json
-import config
+from src.utils import config
+from src.core.ocr_engine import OcrEngine, OCRResultProcessor
+from src.core.llm_engine import OllamaServiceManager, LlmInferenceEngine
+from src.utils.file_ops import TextFileHandler, LogFormatter, CSVFileHandler, ImageFileHandler
 
-# Direct imports of the specialized classes
-from ocr_script import OcrEngine, OCRResultProcessor
-from llm_processor import OllamaServiceManager, LlmInferenceEngine
-from file_manager import TextFileHandler, LogFormatter, CSVFileHandler, ImageFileHandler
-
-def setup_logging():
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(levelname)s - %(message)s',
-        stream=sys.stdout,
-        force=True
-    )
+logger = logging.getLogger(__name__)
 
 class PipelineCoordinator:
     def __init__(self):
@@ -102,7 +93,7 @@ class PipelineCoordinator:
         self.logger.info(f"JSON conversion finished in {time.time() - start_time:.2f}s")
 
         # 4. Finalize Data (CSV and Image Copy)
-        self._finalize_output(image_path, json_result['answer'])
+        return self._finalize_output(image_path, json_result['answer'])
 
     def _finalize_output(self, original_image_path: str, json_string: str):
         try:
@@ -120,28 +111,7 @@ class PipelineCoordinator:
             CSVFileHandler.append_row(self.csv_path, data)
             
             self.logger.info(f"Successfully processed and saved to {new_path}")
+            return data
         except Exception as e:
             self.logger.error(f"Finalization failed: {e}")
-
-def main():
-    setup_logging()
-    DATA_DIR = "data"
-    
-    if not os.path.exists(DATA_DIR):
-        print(f"Directory {DATA_DIR} does not exist.")
-        sys.exit(1)
-
-    image_extensions = ('.jpg', '.jpeg', '.png', '.bmp', '.tiff')
-    images = [f for f in os.listdir(DATA_DIR) if f.lower().endswith(image_extensions)]
-    
-    if not images:
-        print(f"No images found in {DATA_DIR}")
-        sys.exit(0)
-
-    coordinator = PipelineCoordinator()
-    for image_name in images:
-        image_path = os.path.join(DATA_DIR, image_name)
-        coordinator.process_image(image_path)
-
-if __name__ == "__main__":
-    main()
+            return None

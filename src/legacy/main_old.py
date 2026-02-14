@@ -1,8 +1,7 @@
 import logging
 import sys
 import argparse
-import os
-from src.core.coordinator import PipelineCoordinator
+from src.core.pipeline import run_pipeline
 from src.ui.main_window import MainWindow
 
 def setup_logging():
@@ -14,6 +13,7 @@ def setup_logging():
     )
 
 def run_cli():
+    import os
     DATA_DIR = "data"
     
     if not os.path.exists(DATA_DIR):
@@ -27,11 +27,10 @@ def run_cli():
         print(f"No images found in {DATA_DIR}")
         sys.exit(0)
 
-    coordinator = PipelineCoordinator()
     for image_name in images:
         image_path = os.path.join(DATA_DIR, image_name)
-        print(f"Processing: {image_path}")
-        coordinator.process_image(image_path)
+        print(f"\nProcessing: {image_path}")
+        run_pipeline(image_path)
 
 def main():
     parser = argparse.ArgumentParser(description="RC-PaddleOCR Processor")

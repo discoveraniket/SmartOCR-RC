@@ -3,7 +3,7 @@ import time
 import logging
 import subprocess
 import ollama
-import config
+from src.utils import config
 from typing import Optional, Dict, Any
 
 logger = logging.getLogger(__name__)

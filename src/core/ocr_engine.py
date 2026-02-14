@@ -2,7 +2,7 @@ import os
 import logging
 from typing import List, Any
 from paddleocr import PaddleOCR
-import config
+from src.utils import config
 from typing import Dict, Any, List
 
 logger = logging.getLogger(__name__)
@@ -30,8 +30,9 @@ class OCRResultProcessor:
                     "box": box
                 })
 
-        # Sort primarily by Y (with 10px line grouping) and secondarily by X
-        extracted_data.sort(key=lambda r: (r['y'] // 10, r['x']))
+        # Sort primarily by Y (with 15px line grouping to handle slight tilts) 
+        # and secondarily by X (left-to-right)
+        extracted_data.sort(key=lambda r: (r['y'] // 15, r['x']))
         return extracted_data
 
 class OcrEngine:
