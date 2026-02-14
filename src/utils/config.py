@@ -1,28 +1,64 @@
-# --- CONFIGURATION SETTINGS ---
+import os
+import json
 
-OCR_SETTINGS = {
-    "lang": "en",
-    "use_angle_cls": True,
-    "show_log": False,
-    "ocr_version": "PP-OCRv4",
-    "use_gpu": False,
-    "det_db_thresh": 0.3,
-    "det_db_box_thresh": 0.3,       # Lowered to capture faint text
-    "det_db_unclip_ratio": 2.0,     # Increased to prevent character clipping
-    "det_limit_side_len": 1500,     # Increased for high-res clarity
-    "drop_score": 0.05,             # Don't drop low confidence text, let LLM decide
-    "enable_mkldnn": True,
-    "cpu_threads": 4,
-    "rec_image_shape": "3, 48, 320"
+CONFIG_FILE = "config.json"
+
+# --- DEFAULT CONFIGURATION SETTINGS ---
+
+FACTORY_DEFAULTS = {
+    "OCR_SETTINGS": {
+        "lang": "en",
+        "use_angle_cls": True,
+        "show_log": False,
+        "ocr_version": "PP-OCRv4",
+        "use_gpu": False,
+        "det_db_thresh": 0.3,
+        "det_db_box_thresh": 0.3,
+        "det_db_unclip_ratio": 2.0,
+        "det_limit_side_len": 1500,
+        "drop_score": 0.05,
+        "enable_mkldnn": True,
+        "cpu_threads": 4,
+        "rec_image_shape": "3, 48, 320",
+        "default_input_dir": "data",
+        "default_output_dir": "output"
+    },
+    "LLM_SETTINGS": {
+        "step1_model": "deepseek-r1:8b",
+        "text_to_JSON_model": "deepseek-r1:8b",
+        "models_path": r"D:\LLMs\models",
+        "max_loaded_models": "3",
+        "keep_alive": "5m"
+    }
 }
 
-LLM_SETTINGS = {
-    "step1_model": "deepseek-r1:8b",
-    "text_to_JSON_model": "deepseek-r1:8b",
-    "models_path": r"D:\LLMs\models",
-    "max_loaded_models": "3",
-    "keep_alive": "5m"
-}
+OCR_SETTINGS = FACTORY_DEFAULTS["OCR_SETTINGS"].copy()
+LLM_SETTINGS = FACTORY_DEFAULTS["LLM_SETTINGS"].copy()
+
+def load_config():
+    global OCR_SETTINGS, LLM_SETTINGS
+    if os.path.exists(CONFIG_FILE):
+        try:
+            with open(CONFIG_FILE, "r") as f:
+                config = json.load(f)
+                OCR_SETTINGS.update(config.get("OCR_SETTINGS", {}))
+                LLM_SETTINGS.update(config.get("LLM_SETTINGS", {}))
+        except Exception as e:
+            print(f"Error loading config: {e}")
+
+def save_config(ocr_settings, llm_settings):
+    config = {
+        "OCR_SETTINGS": ocr_settings,
+        "LLM_SETTINGS": llm_settings
+    }
+    try:
+        with open(CONFIG_FILE, "w") as f:
+            json.dump(config, f, indent=4)
+    except Exception as e:
+        print(f"Error saving config: {e}")
+
+# Initial load
+load_config()
 
 STANDARD_PROMPT = """
 ### ROLE

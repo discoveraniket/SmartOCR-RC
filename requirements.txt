@@ -3,3 +3,4 @@ paddlepaddle
 ollama
 opencv-python
 pillow
+customtkinter

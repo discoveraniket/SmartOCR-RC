@@ -3,7 +3,7 @@ import sys
 import argparse
 import os
 from src.core.coordinator import PipelineCoordinator
-from src.ui.main_window import MainWindow
+from src.ui.dashboard import Dashboard
 
 def setup_logging():
     logging.basicConfig(
@@ -41,7 +41,7 @@ def main():
     setup_logging()
 
     if args.gui:
-        app = MainWindow()
+        app = Dashboard()
         app.mainloop()
     else:
         run_cli()
