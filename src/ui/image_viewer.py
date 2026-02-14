@@ -175,12 +175,14 @@ class ImageViewerWindow(ctk.CTkToplevel):
             csv_path = os.path.join(new_dir, "results.csv")
             if not os.path.exists(csv_path):
                 messagebox.showerror("Error", f"No results.csv found in selected directory:\n{new_dir}")
+                self.focus_set()
                 return
             
             self.output_dir = new_dir
             self.dir_label.configure(text=f"Dir: {os.path.basename(self.output_dir)}")
             self.handler = ResultDataHandler(csv_path, self.output_dir)
             self.load_current_item()
+        self.focus_set()
 
     def open_model_settings(self):
         dialog = ctk.CTkToplevel(self)
@@ -215,6 +217,7 @@ class ImageViewerWindow(ctk.CTkToplevel):
             })
             dialog.destroy()
             messagebox.showinfo("Applied", "Overrides set.")
+            self.focus_set()
             
         ctk.CTkButton(dialog, text="Apply Locally", command=apply).pack(pady=20)
 
@@ -259,7 +262,9 @@ class ImageViewerWindow(ctk.CTkToplevel):
                     metrics = res.get("metrics", {})
                     duration = metrics.get("ocr", 0) + metrics.get("step1", 0) + metrics.get("json", 0)
                     messagebox.showinfo("Success", f"Extraction complete in {duration:.2f}s.\n(OCR: {metrics.get('ocr', 0)}s, LLM: {metrics.get('step1', 0) + metrics.get('json', 0):.2f}s)")
-                else: messagebox.showerror("Error", "Reprocessing failed.")
+                else: 
+                    messagebox.showerror("Error", "Reprocessing failed.")
+                self.focus_set()
             self.after(0, _update)
         run_in_background(coord.extract_data, img_path, model_overrides=self.model_overrides, callback=on_fin)
 
@@ -288,7 +293,10 @@ class ImageViewerWindow(ctk.CTkToplevel):
         if not item or not self.pil_image: return
         img_path = self.handler.get_image_path(item)
         if messagebox.askyesno("Confirm", "Overwrite original?"):
-            if ImageProcessingService.save_image(self.pil_image, img_path): messagebox.showinfo("Saved", "Image saved.")
+            if ImageProcessingService.save_image(self.pil_image, img_path): 
+                messagebox.showinfo("Saved", "Image saved.")
+        self.focus_set()
+
     def rotate_image(self):
         if self.pil_image: self.pil_image = self.pil_image.rotate(-90, expand=True); self.canvas.set_image(self.pil_image)
     def reset_view(self):
@@ -296,6 +304,7 @@ class ImageViewerWindow(ctk.CTkToplevel):
     def save_edits(self):
         if self.handler.save_edit(self.handler.current_index, {k: v.get() for k, v in self.entries.items()}):
             messagebox.showinfo("Saved", "Data updated.")
+        self.focus_set()
     def next_item(self):
         if self.handler.next_item(): self.load_current_item()
     def prev_item(self):
