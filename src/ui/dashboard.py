@@ -170,11 +170,22 @@ class Dashboard(ctk.CTk):
                 row += 1
             
             row = 1
+            available_models = LLM_SETTINGS.get("available_models", ["deepseek-r1:8b"])
+            
             for key, value in LLM_SETTINGS.items():
+                if key == "available_models":
+                    continue
+                    
                 ctk.CTkLabel(self.llm_frame, text=f"{key}:").grid(row=row, column=0, padx=10, pady=5, sticky="w")
                 
-                entry = ctk.CTkEntry(self.llm_frame)
-                entry.insert(0, str(value))
+                if key.endswith("_model"):
+                    # Use OptionMenu for models
+                    entry = ctk.CTkOptionMenu(self.llm_frame, values=available_models)
+                    entry.set(str(value))
+                else:
+                    entry = ctk.CTkEntry(self.llm_frame)
+                    entry.insert(0, str(value))
+                    
                 entry.grid(row=row, column=1, padx=10, pady=5, sticky="ew")
 
                 # Help Icon to the right

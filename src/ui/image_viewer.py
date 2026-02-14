@@ -166,16 +166,34 @@ class ImageViewerWindow(ctk.CTkToplevel):
         dialog.geometry("400x350")
         dialog.transient(self)
         dialog.grab_set()
+        
+        from src.utils.config import LLM_SETTINGS
+        available_models = LLM_SETTINGS.get("available_models", ["deepseek-r1:8b"])
+        
         ctk.CTkLabel(dialog, text="Temporary Model Overrides", font=ctk.CTkFont(weight="bold")).pack(pady=10)
+        
         ctk.CTkLabel(dialog, text="Cleaning Model (Step 1):").pack(pady=(10, 0))
-        step1_entry = ctk.CTkEntry(dialog, width=300); step1_entry.insert(0, self.model_overrides["step1_model"]); step1_entry.pack(pady=5)
+        step1_menu = ctk.CTkOptionMenu(dialog, width=300, values=available_models)
+        step1_menu.set(self.model_overrides["step1_model"])
+        step1_menu.pack(pady=5)
+        
         ctk.CTkLabel(dialog, text="JSON Model (Step 2):").pack(pady=(10, 0))
-        json_entry = ctk.CTkEntry(dialog, width=300); json_entry.insert(0, self.model_overrides["text_to_JSON_model"]); json_entry.pack(pady=5)
+        json_menu = ctk.CTkOptionMenu(dialog, width=300, values=available_models)
+        json_menu.set(self.model_overrides["text_to_JSON_model"])
+        json_menu.pack(pady=5)
+        
         think_var = ctk.BooleanVar(value=self.model_overrides["think"])
         ctk.CTkCheckBox(dialog, text="Enable Thinking (Step 1)", variable=think_var).pack(pady=10)
+        
         def apply():
-            self.model_overrides.update({"step1_model": step1_entry.get(), "text_to_JSON_model": json_entry.get(), "think": think_var.get()})
-            dialog.destroy(); messagebox.showinfo("Applied", "Overrides set.")
+            self.model_overrides.update({
+                "step1_model": step1_menu.get(), 
+                "text_to_JSON_model": json_menu.get(), 
+                "think": think_var.get()
+            })
+            dialog.destroy()
+            messagebox.showinfo("Applied", "Overrides set.")
+            
         ctk.CTkButton(dialog, text="Apply Locally", command=apply).pack(pady=20)
 
     def load_current_item(self):

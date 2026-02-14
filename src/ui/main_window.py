@@ -12,7 +12,10 @@ class MainWindow(tk.Tk):
         super().__init__()
         self.title("RC-PaddleOCR v2")
         self.geometry("800x600")
-        self.coordinator = PipelineCoordinator()
+        
+        from src.utils import config
+        out_dir = config.OCR_SETTINGS.get("default_output_dir", "output")
+        self.coordinator = PipelineCoordinator(output_dir=out_dir)
         self.setup_ui()
 
     def setup_ui(self):

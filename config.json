@@ -15,6 +15,7 @@
         "rec_image_shape": "3, 48, 320",
         "crop_padding": 100,
         "auto_crop": true,
+        "dump_text_flow": true,
         "default_input_dir": "data",
         "default_output_dir": "output"
     },

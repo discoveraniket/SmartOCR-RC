@@ -40,11 +40,25 @@ FACTORY_DEFAULTS = {
     "LLM_SETTINGS": {
         "step1_model": "deepseek-r1:8b",
         "text_to_JSON_model": "deepseek-r1:8b",
+        "available_models": ["deepseek-r1:8b", "llama3.2:3b"],
         "models_path": r"D:\LLMs\models",
         "max_loaded_models": "3",
         "keep_alive": "5m"
     }
 }
+
+#--------------Keep this list---------------
+# deepseek-r1:8b                6995872bfe4c    5.2 GB    3 minutes ago
+# llama3.2:3b                   a80c4f17acd5    2.0 GB    7 hours ago
+# moondream:1.8b                55fc3abd3867    1.7 GB    10 hours ago
+# qwen2.5:0.5b                  a8b0c5157701    397 MB    12 hours ago
+# qwen3-vl:8b                   901cae732162    6.1 GB    31 hours ago
+# qwen2.5vl:3b                  fb90415cde1e    3.2 GB    39 hours ago
+# llava:7b_q8                   08b71b1c4899    8.3 GB    3 months ago
+# llava:7b-v1.6-mistral-q8_0    c2973e390e84    8.3 GB    3 months ago
+# llava:7b_custom               ede6315df27f    4.7 GB    3 months ago
+# llava:7b                      8dd30f6b0cb1    4.7 GB    3 months ago
+# llava-phi3:latest             c7edd7b87593    2.9 GB    3 months ago
 
 OCR_SETTINGS = FACTORY_DEFAULTS["OCR_SETTINGS"].copy()
 LLM_SETTINGS = FACTORY_DEFAULTS["LLM_SETTINGS"].copy()

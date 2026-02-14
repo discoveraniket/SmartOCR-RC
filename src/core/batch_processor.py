@@ -19,7 +19,7 @@ class BatchProcessor:
         self.auto_retry = auto_retry
         self.post_action = post_action
         
-        self.coordinator = PipelineCoordinator()
+        self.coordinator = PipelineCoordinator(output_dir=output_dir)
         self.queue = Queue()
         self.total_files = 0
         self.processed_count = 0

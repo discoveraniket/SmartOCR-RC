@@ -13,7 +13,7 @@ from src.utils.image_processing import ImageProcessingService
 logger = logging.getLogger(__name__)
 
 class PipelineCoordinator:
-    def __init__(self):
+    def __init__(self, output_dir: str = None):
         self.logger = logging.getLogger(__name__)
         
         # Initialize specialized components
@@ -29,8 +29,8 @@ class PipelineCoordinator:
         self.ocr_processor = OCRResultProcessor()
         self.llm_engine = LlmInferenceEngine()
         
-        # Paths from config
-        self.output_dir = "output"
+        # Paths from config or override
+        self.output_dir = output_dir or config.OCR_SETTINGS.get("default_output_dir", "output")
         self.log_dir = os.path.join(self.output_dir, "logs")
         self.csv_path = os.path.join(self.output_dir, "results.csv")
 
