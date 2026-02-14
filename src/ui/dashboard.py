@@ -125,13 +125,21 @@ class Dashboard(ctk.CTk):
             
             for key, (entry, _) in self.ocr_entries.items():
                 if key in ocr_defaults:
-                    entry.delete(0, "end")
-                    entry.insert(0, str(ocr_defaults[key]))
+                    if isinstance(entry, ctk.CTkTextbox):
+                        entry.delete("1.0", "end")
+                        entry.insert("1.0", str(ocr_defaults[key]))
+                    else:
+                        entry.delete(0, "end")
+                        entry.insert(0, str(ocr_defaults[key]))
                     
             for key, (entry, _) in self.llm_entries.items():
                 if key in llm_defaults:
-                    entry.delete(0, "end")
-                    entry.insert(0, str(llm_defaults[key]))
+                    if isinstance(entry, ctk.CTkTextbox):
+                        entry.delete("1.0", "end")
+                        entry.insert("1.0", str(llm_defaults[key]))
+                    else:
+                        entry.delete(0, "end")
+                        entry.insert(0, str(llm_defaults[key]))
             
             messagebox.showinfo("Success", "Settings reverted to defaults.")
 
@@ -176,23 +184,28 @@ class Dashboard(ctk.CTk):
                 if key == "available_models":
                     continue
                     
-                ctk.CTkLabel(self.llm_frame, text=f"{key}:").grid(row=row, column=0, padx=10, pady=5, sticky="w")
+                ctk.CTkLabel(self.llm_frame, text=f"{key}:").grid(row=row, column=0, padx=10, pady=5, sticky="nw")
                 
                 if key.endswith("_model"):
                     # Use OptionMenu for models
                     entry = ctk.CTkOptionMenu(self.llm_frame, values=available_models)
                     entry.set(str(value))
+                    entry.grid(row=row, column=1, padx=10, pady=5, sticky="ew")
+                elif key.endswith("_prompt"):
+                    # Use Textbox for prompts
+                    entry = ctk.CTkTextbox(self.llm_frame, height=100)
+                    entry.insert("1.0", str(value))
+                    entry.grid(row=row, column=1, padx=10, pady=5, sticky="ew")
                 else:
                     entry = ctk.CTkEntry(self.llm_frame)
                     entry.insert(0, str(value))
-                    
-                entry.grid(row=row, column=1, padx=10, pady=5, sticky="ew")
+                    entry.grid(row=row, column=1, padx=10, pady=5, sticky="ew")
 
                 # Help Icon to the right
                 help_btn = ctk.CTkButton(self.llm_frame, text="?", width=25, height=25, corner_radius=12, 
                                         fg_color="#3B3B3B", hover_color="#555555",
                                         command=lambda k=key: self.show_help(k))
-                help_btn.grid(row=row, column=2, padx=5, pady=5)
+                help_btn.grid(row=row, column=2, padx=5, pady=5, sticky="n")
 
                 self.llm_entries[key] = (entry, type(value))
                 row += 1
@@ -218,6 +231,8 @@ class Dashboard(ctk.CTk):
             "crop_padding": "Padding (in pixels) added around the text area during auto-crop.",
             "auto_crop": "Automatically crop the image to text areas for better accuracy.",
             "dump_text_flow": "Save raw and cleaned text to a .txt file in output/logs for auditing.",
+            "standard_prompt": "The main prompt for text cleaning. Use 'USE_DEFAULT' to use the built-in system prompt.",
+            "text_to_json_prompt": "The prompt for JSON conversion. Use 'USE_DEFAULT' to use the built-in system prompt.",
             "step1_model": "Ollama model used for initial text cleaning/reasoning.",
             "text_to_JSON_model": "Ollama model used for final data extraction.",
             "models_path": "Local path where LLM models are stored.",
@@ -230,7 +245,12 @@ class Dashboard(ctk.CTk):
     def save_settings(self):
         from src.utils.config import save_config
         
-        def parse_value(val_str, target_type):
+        def parse_value(entry, target_type):
+            if isinstance(entry, ctk.CTkTextbox):
+                val_str = entry.get("1.0", "end-1c")
+            else:
+                val_str = entry.get()
+                
             if target_type == bool:
                 return val_str.lower() in ("true", "1", "yes")
             try:
@@ -238,11 +258,11 @@ class Dashboard(ctk.CTk):
             except:
                 return val_str
 
-        updated_ocr = {k: parse_value(v[0].get(), v[1]) for k, v in self.ocr_entries.items()}
+        updated_ocr = {k: parse_value(v[0], v[1]) for k, v in self.ocr_entries.items()}
         updated_ocr["default_input_dir"] = self.input_dir_entry.get()
         updated_ocr["default_output_dir"] = self.output_dir_entry.get()
         
-        updated_llm = {k: parse_value(v[0].get(), v[1]) for k, v in self.llm_entries.items()}
+        updated_llm = {k: parse_value(v[0], v[1]) for k, v in self.llm_entries.items()}
         
         save_config(updated_ocr, updated_llm)
         from tkinter import messagebox

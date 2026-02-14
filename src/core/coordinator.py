@@ -135,7 +135,13 @@ class PipelineCoordinator:
             return None
 
         clean_model = overrides.get("step1_model") or config.LLM_SETTINGS.get("step1_model")
-        prompt = f"{config.STANDARD_PROMPT}OCR_TEXT:{full_text}"
+        
+        # Use configurable prompt if available
+        base_prompt = config.LLM_SETTINGS.get("standard_prompt", "USE_DEFAULT")
+        if base_prompt == "USE_DEFAULT":
+            base_prompt = config.STANDARD_PROMPT
+            
+        prompt = f"{base_prompt}OCR_TEXT:{full_text}"
         
         # Check for think override
         think_enabled = overrides.get("think", False)
@@ -152,7 +158,13 @@ class PipelineCoordinator:
 
         # 3. Text to JSON Stage
         json_model = overrides.get("text_to_JSON_model") or config.LLM_SETTINGS.get("text_to_JSON_model")
-        json_prompt = f"{config.TEXT_TO_JSON_PROMPT}TEXT:{clean_result['answer']}"
+        
+        # Use configurable prompt if available
+        json_base_prompt = config.LLM_SETTINGS.get("text_to_json_prompt", "USE_DEFAULT")
+        if json_base_prompt == "USE_DEFAULT":
+            json_base_prompt = config.TEXT_TO_JSON_PROMPT
+            
+        json_prompt = f"{json_base_prompt}TEXT:{clean_result['answer']}"
         
         self.logger.info(f"Running LLM JSON extraction with model: {json_model}...")
         start_time_json = time.time()

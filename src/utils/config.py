@@ -43,7 +43,9 @@ FACTORY_DEFAULTS = {
         "available_models": ["deepseek-r1:8b", "llama3.2:3b", "richardyoung/olmocr2:7b-q8"],
         "models_path": r"D:\LLMs\models",
         "max_loaded_models": "3",
-        "keep_alive": "5m"
+        "keep_alive": "5m",
+        "standard_prompt": "USE_DEFAULT",
+        "text_to_json_prompt": "USE_DEFAULT"
     }
 }
 
@@ -115,6 +117,7 @@ Extract specific data points from the provided OCR text and return them in a str
     - **OCR Correction**:
     - Replace common character misreads: 'or 'o' -> '0', 'I' or 'l' -> '1', 'S' -> '5, 'B' -> '8'.
     - **Digit Count**: If the count is slightly off (e.g., 9 or 11 digits), use surrounding context to determine if a digit was missed or added by OCR and normalize it to 10 digits if possible; dont return null.
+    - If you cannot find the mobile number, consider the last digit like string as the mobile number.
 
 ### CONSTRAINTS
 - **No Dummy Data**: If a field is not found, return `null`. Do not invent placeholders.

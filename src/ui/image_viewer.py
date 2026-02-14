@@ -69,13 +69,13 @@ class ImageViewerWindow(ctk.CTkToplevel):
         super().__init__(parent)
         self.title("Result Image Viewer & Editor")
         self.geometry("1400x950")
-        self.transient(parent)
+        # Removed self.transient(parent) to allow minimize/maximize buttons
 
         from src.utils.config import OCR_SETTINGS, LLM_SETTINGS
         base_dir = os.path.dirname(os.path.abspath(__file__))
         project_root = os.path.dirname(os.path.dirname(base_dir))
-        output_dir = os.path.join(project_root, OCR_SETTINGS.get("default_output_dir", "output"))
-        self.handler = ResultDataHandler(os.path.join(output_dir, "results.csv"), output_dir)
+        self.output_dir = os.path.join(project_root, OCR_SETTINGS.get("default_output_dir", "output"))
+        self.handler = ResultDataHandler(os.path.join(self.output_dir, "results.csv"), self.output_dir)
         
         # Temp Overrides
         self.model_overrides = {
@@ -131,6 +131,14 @@ class ImageViewerWindow(ctk.CTkToplevel):
 
         self.data_frame = ctk.CTkFrame(self)
         self.data_frame.grid(row=0, column=1, padx=10, pady=10, sticky="nsew")
+        
+        # Directory Control
+        dir_frame = ctk.CTkFrame(self.data_frame, fg_color="transparent")
+        dir_frame.pack(fill="x", padx=10, pady=(10, 0))
+        self.dir_label = ctk.CTkLabel(dir_frame, text=f"Dir: {os.path.basename(self.output_dir)}", font=ctk.CTkFont(size=11))
+        self.dir_label.pack(side="left")
+        ctk.CTkButton(dir_frame, text="Browse", width=60, height=24, command=self.browse_output_dir).pack(side="right")
+
         ctk.CTkLabel(self.data_frame, text="Extracted Data", font=ctk.CTkFont(size=18, weight="bold")).pack(pady=20)
 
         self.fields_container = ctk.CTkScrollableFrame(self.data_frame, fg_color="transparent")
@@ -159,6 +167,20 @@ class ImageViewerWindow(ctk.CTkToplevel):
         
         self.next_btn = ctk.CTkButton(self.nav_frame, text=f"Next >\n{fmt(KEY_MAP['viewer_next'])}", width=80, command=self.next_item)
         self.next_btn.pack(side="right")
+
+    def browse_output_dir(self):
+        from tkinter import filedialog
+        new_dir = filedialog.askdirectory(initialdir=self.output_dir)
+        if new_dir:
+            csv_path = os.path.join(new_dir, "results.csv")
+            if not os.path.exists(csv_path):
+                messagebox.showerror("Error", f"No results.csv found in selected directory:\n{new_dir}")
+                return
+            
+            self.output_dir = new_dir
+            self.dir_label.configure(text=f"Dir: {os.path.basename(self.output_dir)}")
+            self.handler = ResultDataHandler(csv_path, self.output_dir)
+            self.load_current_item()
 
     def open_model_settings(self):
         dialog = ctk.CTkToplevel(self)
@@ -232,7 +254,11 @@ class ImageViewerWindow(ctk.CTkToplevel):
                 if res and "data" in res:
                     for k, v in self.entries.items():
                         if k in res["data"]: v.delete(0, "end"); v.insert(0, str(res["data"][k]))
-                    messagebox.showinfo("Success", "Extraction complete.")
+                    
+                    # Show duration in success message
+                    metrics = res.get("metrics", {})
+                    duration = metrics.get("ocr", 0) + metrics.get("step1", 0) + metrics.get("json", 0)
+                    messagebox.showinfo("Success", f"Extraction complete in {duration:.2f}s.\n(OCR: {metrics.get('ocr', 0)}s, LLM: {metrics.get('step1', 0) + metrics.get('json', 0):.2f}s)")
                 else: messagebox.showerror("Error", "Reprocessing failed.")
             self.after(0, _update)
         run_in_background(coord.extract_data, img_path, model_overrides=self.model_overrides, callback=on_fin)
