@@ -57,7 +57,8 @@ FACTORY_DEFAULTS: Dict[str, Any] = {
         "default_output_dir": "output",
         "crop_padding": 20,
         "auto_crop": True,
-        "dump_text_flow": True
+        "dump_text_flow": True,
+        "viewer_font_size": 18
     },
     "KEY_MAP": {
         "viewer_next": "<Control-Right>",
@@ -68,7 +69,20 @@ FACTORY_DEFAULTS: Dict[str, Any] = {
         "viewer_crop": "<Control-C>",
         "viewer_reprocess": "<Control-A>",
         "viewer_settings": "<Control-G>",
+        "viewer_view_log": "<Control-L>",
         "viewer_reset": "<Control-0>"
+    },
+    "KEY_HINTS": {
+        "viewer_next": "",
+        "viewer_prev": "",
+        "viewer_save_data": "[S]",
+        "viewer_save_img": "[I]",
+        "viewer_rotate": "[R]",
+        "viewer_crop": "[K]",
+        "viewer_reprocess": "[A]",
+        "viewer_settings": "[G]",
+        "viewer_view_log": "[L]",
+        "viewer_reset": "[0]"
     },
     "LLM_SETTINGS": {
         "step1_model": "deepseek-r1:8b",
@@ -100,10 +114,11 @@ TEXT_TO_JSON_PROMPT = load_prompt("text_to_json.txt")
 OCR_SETTINGS = FACTORY_DEFAULTS["OCR_SETTINGS"].copy()
 LLM_SETTINGS = FACTORY_DEFAULTS["LLM_SETTINGS"].copy()
 KEY_MAP = FACTORY_DEFAULTS["KEY_MAP"].copy()
+KEY_HINTS = FACTORY_DEFAULTS["KEY_HINTS"].copy()
 
 def load_config():
     """Loads configuration from JSON file, merging with factory defaults."""
-    global OCR_SETTINGS, LLM_SETTINGS, KEY_MAP
+    global OCR_SETTINGS, LLM_SETTINGS, KEY_MAP, KEY_HINTS
     if CONFIG_FILE.exists():
         try:
             with CONFIG_FILE.open("r", encoding="utf-8") as f:
@@ -111,15 +126,17 @@ def load_config():
                 OCR_SETTINGS.update(config_data.get("OCR_SETTINGS", {}))
                 LLM_SETTINGS.update(config_data.get("LLM_SETTINGS", {}))
                 KEY_MAP.update(config_data.get("KEY_MAP", {}))
+                KEY_HINTS.update(config_data.get("KEY_HINTS", {}))
         except Exception as e:
             logger.error(f"Error loading config: {e}")
 
-def save_config(ocr_settings: dict, llm_settings: dict, key_map: dict = None):
+def save_config(ocr_settings: dict, llm_settings: dict, key_map: dict = None, key_hints: dict = None):
     """Saves current configuration to JSON file."""
     config_data = {
         "OCR_SETTINGS": ocr_settings,
         "LLM_SETTINGS": llm_settings,
-        "KEY_MAP": key_map or KEY_MAP
+        "KEY_MAP": key_map or KEY_MAP,
+        "KEY_HINTS": key_hints or KEY_HINTS
     }
     try:
         with CONFIG_FILE.open("w", encoding="utf-8") as f:

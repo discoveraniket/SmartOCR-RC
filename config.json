@@ -13,15 +13,24 @@
         "enable_mkldnn": true,
         "cpu_threads": 4,
         "rec_image_shape": "3, 48, 320",
+        "default_input_dir": "D:/Codes/GitHub/RC-PaddleOCR - v2/data",
+        "default_output_dir": "D:/Codes/GitHub/RC-PaddleOCR - v2/output",
         "crop_padding": 100,
         "auto_crop": true,
         "dump_text_flow": true,
-        "default_input_dir": "D:/Codes/GitHub/RC-PaddleOCR - v2/data",
-        "default_output_dir": "D:/Codes/GitHub/RC-PaddleOCR - v2/output"
+        "viewer_font_size": 32,
+        "viewer_font_size_primary": 20,
+        "viewer_font_size_standard": 15
     },
     "LLM_SETTINGS": {
         "step1_model": "qwen2.5:14b-instruct",
         "text_to_JSON_model": "llama3.2:3b",
+        "available_models": [
+            "deepseek-r1:8b",
+            "llama3.2:3b",
+            "richardyoung/olmocr2:7b-q8",
+            "qwen2.5:14b-instruct"
+        ],
         "models_path": "D:\\LLMs\\models",
         "max_loaded_models": "3",
         "keep_alive": "5m",
@@ -37,6 +46,19 @@
         "viewer_crop": "<Control-C>",
         "viewer_reprocess": "<Control-A>",
         "viewer_settings": "<Control-G>",
+        "viewer_view_log": "<Control-L>",
         "viewer_reset": "<Control-0>"
+    },
+    "KEY_HINTS": {
+        "viewer_next": "",
+        "viewer_prev": "",
+        "viewer_save_data": "[S]",
+        "viewer_save_img": "[I]",
+        "viewer_rotate": "[R]",
+        "viewer_crop": "[K]",
+        "viewer_reprocess": "[A]",
+        "viewer_settings": "[G]",
+        "viewer_view_log": "[L]",
+        "viewer_reset": "[0]"
     }
 }
