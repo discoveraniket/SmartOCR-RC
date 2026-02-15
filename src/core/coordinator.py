@@ -169,7 +169,7 @@ class PipelineCoordinator:
         if json_base_prompt == "USE_DEFAULT":
             json_base_prompt = config.TEXT_TO_JSON_PROMPT
             
-        json_prompt = f"{json_base_prompt}TEXT:{clean_result['answer']}"
+        json_prompt = f"{json_base_prompt}/n### SOURCE TEXT:/n{clean_result['answer']}"
         
         self.logger.info(f"Running LLM JSON extraction with model: {json_model}...")
         start_time_json = time.time()

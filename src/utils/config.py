@@ -179,16 +179,34 @@ JSON structure:
     "id" : "1234567890"
 }}
 """
-
+# Kept this for backup
+# TEXT_TO_JSON_PROMPT = """
+# Convert this text into a JSON object
+# JSON Template:
+# {{
+#     "category" : "SPHH",
+#     "id" : "1234567890",
+#     "name" : "String (Upper Case)",
+#     "mobile" : "String (10 digits)"
+# }}
+# """
 TEXT_TO_JSON_PROMPT = """
-Convert this text into a JSON object
-JSON Template:
-{{
-    "category" : "SPHH",
-    "id" : "1234567890",
-    "name" : "String (Upper Case)",
-    "mobile" : "String (10 digits)"
-}}
+Role: ACT AS A DATA EXTRACTOR.
+Task: Convert the following data into JSON
+
+### EXPECTED JSON TEMPLATE:
+{
+    "category" :
+    "id" :
+    "name" :
+    "mobile" :
+}
+
+### RULES:
+1. Use the keys defined in the JSON TEMPLATE.
+2. Fill the values EXACTLY as they appear in the SOURCE TEXT.
+3. Do not modify formatting, casing, or spacing of the values.
+4. Output only the raw JSON object, no lists.
 """
 
 # image_viewer.py -> entry_font = ctk.CTkFont(size=30)

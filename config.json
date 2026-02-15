@@ -17,11 +17,11 @@
         "auto_crop": true,
         "dump_text_flow": true,
         "default_input_dir": "D:/Codes/GitHub/RC-PaddleOCR - v2/data",
-        "default_output_dir": "D:/Desktop/Duck/Output"
+        "default_output_dir": "D:/Codes/GitHub/RC-PaddleOCR - v2/output"
     },
     "LLM_SETTINGS": {
         "step1_model": "qwen2.5:14b-instruct",
-        "text_to_JSON_model": "deepseek-r1:8b",
+        "text_to_JSON_model": "llama3.2:3b",
         "models_path": "D:\\LLMs\\models",
         "max_loaded_models": "3",
         "keep_alive": "5m",
