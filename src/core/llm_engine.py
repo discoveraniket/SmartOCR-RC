@@ -86,7 +86,8 @@ class LlmInferenceEngine:
             response = ollama.generate(model=model, prompt=prompt, format=format, think=think)
             return {
                 "answer": response.get('response', '').strip(),
-                "thinking": response.get('thinking', '').strip() if think else None
+                "thinking": response.get('thinking', '').strip() if think else None,
+                "duration": response.get('total_duration', 0) / 1e9  # Convert nanoseconds to seconds
             }
         except Exception as e:
             logger.error(f"Inference failed for model '{model}': {e}")

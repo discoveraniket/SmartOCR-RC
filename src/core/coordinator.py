@@ -152,9 +152,10 @@ class PipelineCoordinator:
         think_enabled = overrides.get("think", False)
         
         self.logger.info(f"Running LLM cleaning with model: {clean_model}...")
-        start_time_step1 = time.time()
         clean_result = self.llm_engine.generate_response(clean_model, prompt, think=think_enabled)
-        metrics['step1'] = round(time.time() - start_time_step1, 2)
+        
+        # Use reported duration from Ollama if available, otherwise 0
+        metrics['step1'] = round(clean_result.get('duration', 0), 2) if clean_result else 0
         self.logger.info(f"LLM Cleaning took: {metrics['step1']}s")
         if step_callback: step_callback(metrics)
         
@@ -172,9 +173,10 @@ class PipelineCoordinator:
         json_prompt = f"{json_base_prompt}/n### SOURCE TEXT:/n{clean_result['answer']}"
         
         self.logger.info(f"Running LLM JSON extraction with model: {json_model}...")
-        start_time_json = time.time()
         json_result = self.llm_engine.generate_response(json_model, json_prompt, format="json")
-        metrics['json'] = round(time.time() - start_time_json, 2)
+        
+        # Use reported duration from Ollama if available, otherwise 0
+        metrics['json'] = round(json_result.get('duration', 0), 2) if json_result else 0
         self.logger.info(f"LLM JSON extraction took: {metrics['json']}s")
         if step_callback: step_callback(metrics)
         
