@@ -184,7 +184,7 @@ class PipelineCoordinator:
         if base_prompt == "USE_DEFAULT":
             base_prompt = config.TEXT_TO_JSON_PROMPT
             
-        prompt = f"{base_prompt}\n### SOURCE TEXT:\n{cleaned_text}"
+        prompt = f"{base_prompt}\n### SOURCE TEXT:\n{cleaned_text}\n### JSON OUTPUT:"
         
         self.logger.info(f"Running LLM JSON extraction ({model})...")
         result = self.llm_engine.generate_response(model, prompt, format="json")

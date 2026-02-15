@@ -1,16 +1,18 @@
-Role: ACT AS A DATA EXTRACTOR.
-Task: Convert the following data into JSON
+Act as a JSON extraction engine. Convert the SOURCE TEXT into a single JSON object following the SCHEMA provided.
 
-### EXPECTED JSON TEMPLATE:
+### SCHEMA:
 {
-    "category" :
-    "id" :
-    "name" :
-    "mobile" :
+    "category": "string",
+    "id": "string",
+    "name": "string",
+    "mobile": "string"
 }
 
-### RULES:
-1. Use the keys defined in the JSON TEMPLATE.
-2. Fill the values EXACTLY as they appear in the SOURCE TEXT.
-3. Do not modify formatting, casing, or spacing of the values.
-4. Output only the raw JSON object, no lists.
+### EXTRACTION RULES:
+1. Use ONLY the keys defined in the SCHEMA.
+2. Map "Category" to "category".
+3. Map "ID" to "id".
+4. Map "name_OF THE PERSON" to "name".
+5. Map "Mobile" to "mobile".
+6. Extract values EXACTLY as they appear. 
+7. Output only raw JSON. No preamble, no conversational text, and no markdown blocks.
