@@ -1,287 +1,155 @@
 import customtkinter as ctk
-import os
-import json
 import logging
-from tkinter import filedialog
-from src.utils.threading import run_in_background
+from tkinter import messagebox
+
+from src.utils.config import OCR_SETTINGS, LLM_SETTINGS, KEY_MAP, save_config, FACTORY_DEFAULTS
 from src.ui.batch_window import BatchWindow
 from src.ui.image_viewer import ImageViewerWindow
+from src.ui.components.settings_pane import SettingsPane
+from src.ui.ui_utils import browse_directory
 
 logger = logging.getLogger(__name__)
+
+HELP_TEXT = {
+    "lang": "Language code for OCR (e.g., 'en', 'ch').",
+    "use_angle_cls": "Enable text angle classification for rotated text.",
+    "show_log": "Display PaddleOCR internal logs in console.",
+    "ocr_version": "Version of the OCR model (e.g., PP-OCRv4).",
+    "use_gpu": "Use NVIDIA GPU (requires CUDA) for acceleration.",
+    "det_db_thresh": "Threshold for text detection binarization.",
+    "det_db_box_thresh": "Threshold for filtering detected text boxes.",
+    "det_db_unclip_ratio": "Expands detection boxes to prevent clipping.",
+    "det_limit_side_len": "Maximum side length for detection scaling.",
+    "drop_score": "Filter out text with confidence lower than this.",
+    "enable_mkldnn": "Use Intel MKLDNN for faster CPU processing.",
+    "cpu_threads": "Number of CPU threads to use.",
+    "rec_image_shape": "Input shape for the recognition model.",
+    "crop_padding": "Padding added around text during auto-crop.",
+    "auto_crop": "Automatically crop image to text areas.",
+    "dump_text_flow": "Save raw/cleaned text to logs for auditing.",
+    "standard_prompt": "Main cleaning prompt. Use 'USE_DEFAULT' for built-in.",
+    "text_to_json_prompt": "JSON conversion prompt. Use 'USE_DEFAULT' for built-in.",
+    "step1_model": "Ollama model for cleaning.",
+    "text_to_JSON_model": "Ollama model for JSON extraction.",
+    "models_path": "Local path for LLM models.",
+    "max_loaded_models": "Max models in memory.",
+    "keep_alive": "How long models stay loaded."
+}
 
 class Dashboard(ctk.CTk):
     def __init__(self):
         super().__init__()
 
         self.title("RC-PaddleOCR - Dashboard")
-        self.geometry("950x750")
+        self.geometry("1100x850")
         
-        # Set appearance mode
         ctk.set_appearance_mode("Dark")
         ctk.set_default_color_theme("blue")
 
+        self._setup_layout()
+        self._setup_sidebar()
+        self._setup_main_content()
+
+    def _setup_layout(self):
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
-        # Sidebar frame
-        self.sidebar_frame = ctk.CTkFrame(self, width=200, corner_radius=0)
-        self.sidebar_frame.grid(row=0, column=0, sticky="nsew")
-        self.sidebar_frame.grid_rowconfigure(4, weight=1)
-
-        self.logo_label = ctk.CTkLabel(self.sidebar_frame, text="RC-PaddleOCR", font=ctk.CTkFont(size=20, weight="bold"))
-        self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10))
-
-        self.batch_btn = ctk.CTkButton(self.sidebar_frame, text="Batch Processing", command=self.open_batch_window)
-        self.batch_btn.grid(row=1, column=0, padx=20, pady=10)
-
-        self.viewer_btn = ctk.CTkButton(self.sidebar_frame, text="Image Viewer", command=self.open_viewer_window)
-        self.viewer_btn.grid(row=2, column=0, padx=20, pady=10)
-
-        self.appearance_mode_label = ctk.CTkLabel(self.sidebar_frame, text="Appearance Mode:", anchor="w")
-        self.appearance_mode_label.grid(row=5, column=0, padx=20, pady=(10, 0))
-        self.appearance_mode_optionemenu = ctk.CTkOptionMenu(self.sidebar_frame, values=["Light", "Dark", "System"],
-                                                                       command=self.change_appearance_mode_event)
-        self.appearance_mode_optionemenu.grid(row=6, column=0, padx=20, pady=(10, 10))
-        self.appearance_mode_optionemenu.set("Dark")
-
-        # Main content frame
-        self.main_frame = ctk.CTkScrollableFrame(self, corner_radius=0)
-        self.main_frame.grid(row=0, column=1, sticky="nsew", padx=20, pady=20)
-        self.main_frame.grid_columnconfigure(0, weight=1)
-
-        self.setup_settings_ui()
-
-    def setup_settings_ui(self):
-        # Settings Label
-        self.settings_label = ctk.CTkLabel(self.main_frame, text="Configuration Settings", font=ctk.CTkFont(size=24, weight="bold"))
-        self.settings_label.grid(row=0, column=0, padx=20, pady=(20, 20), sticky="w")
-
-        # Paths Section
-        self.paths_frame = ctk.CTkFrame(self.main_frame)
-        self.paths_frame.grid(row=1, column=0, padx=20, pady=10, sticky="nsew")
-        self.paths_frame.grid_columnconfigure(1, weight=1)
-
-        ctk.CTkLabel(self.paths_frame, text="Default Input Directory:", font=ctk.CTkFont(weight="bold")).grid(row=0, column=0, padx=10, pady=10, sticky="w")
-        self.input_dir_entry = ctk.CTkEntry(self.paths_frame)
-        self.input_dir_entry.grid(row=0, column=1, padx=10, pady=10, sticky="ew")
-        self.input_dir_btn = ctk.CTkButton(self.paths_frame, text="Browse", width=80, command=lambda: self.browse_directory(self.input_dir_entry))
-        self.input_dir_btn.grid(row=0, column=2, padx=10, pady=10)
-
-        ctk.CTkLabel(self.paths_frame, text="Default Output Directory:", font=ctk.CTkFont(weight="bold")).grid(row=1, column=0, padx=10, pady=10, sticky="w")
-        self.output_dir_entry = ctk.CTkEntry(self.paths_frame)
-        self.output_dir_entry.grid(row=1, column=1, padx=10, pady=10, sticky="ew")
-        self.output_dir_btn = ctk.CTkButton(self.paths_frame, text="Browse", width=80, command=lambda: self.browse_directory(self.output_dir_entry))
-        self.output_dir_btn.grid(row=1, column=2, padx=10, pady=10)
-
-        # OCR Settings Section
-        self.ocr_frame = ctk.CTkFrame(self.main_frame)
-        self.ocr_frame.grid(row=2, column=0, padx=20, pady=10, sticky="nsew")
-        self.ocr_frame.grid_columnconfigure(1, weight=1)
-        ctk.CTkLabel(self.ocr_frame, text="OCR Settings", font=ctk.CTkFont(size=18, weight="bold")).grid(row=0, column=0, columnspan=2, padx=10, pady=10, sticky="w")
+    def _setup_sidebar(self):
+        self.sidebar = ctk.CTkFrame(self, width=200, corner_radius=0)
+        self.sidebar.grid(row=0, column=0, sticky="nsew")
         
-        # LLM Settings Section
-        self.llm_frame = ctk.CTkFrame(self.main_frame)
-        self.llm_frame.grid(row=3, column=0, padx=20, pady=10, sticky="nsew")
-        self.llm_frame.grid_columnconfigure(1, weight=1)
-        ctk.CTkLabel(self.llm_frame, text="LLM Settings", font=ctk.CTkFont(size=18, weight="bold")).grid(row=0, column=0, columnspan=2, padx=10, pady=10, sticky="w")
+        ctk.CTkLabel(self.sidebar, text="RC-PaddleOCR", font=ctk.CTkFont(size=20, weight="bold")).pack(pady=20)
+
+        ctk.CTkButton(self.sidebar, text="Batch Processing", command=self.open_batch_window).pack(padx=20, pady=10)
+        ctk.CTkButton(self.sidebar, text="Image Viewer", command=self.open_viewer_window).pack(padx=20, pady=10)
+
+        # Bottom UI controls
+        ctk.CTkLabel(self.sidebar, text="Appearance:").pack(side="bottom", padx=20, pady=(0, 5))
+        self.appearance_menu = ctk.CTkOptionMenu(self.sidebar, values=["Light", "Dark", "System"], command=ctk.set_appearance_mode)
+        self.appearance_menu.pack(side="bottom", padx=20, pady=(0, 20))
+        self.appearance_menu.set("Dark")
+
+    def _setup_main_content(self):
+        self.main_container = ctk.CTkFrame(self, corner_radius=0, fg_color="transparent")
+        self.main_container.grid(row=0, column=1, sticky="nsew", padx=20, pady=20)
+        self.main_container.grid_columnconfigure(0, weight=1)
+        self.main_container.grid_rowconfigure(2, weight=1)
+
+        ctk.CTkLabel(self.main_container, text="Configuration Settings", font=ctk.CTkFont(size=24, weight="bold")).grid(row=0, column=0, sticky="w", pady=(0, 20))
+
+        # Path Overrides
+        self.path_frame = ctk.CTkFrame(self.main_container)
+        self.path_frame.grid(row=1, column=0, sticky="ew", pady=(0, 20))
+        self.path_frame.grid_columnconfigure(1, weight=1)
+
+        self._create_path_row("Input:", "default_input_dir", 0)
+        self._create_path_row("Output:", "default_output_dir", 1)
+
+        # Settings Tabs/Panes
+        self.tabview = ctk.CTkTabview(self.main_container)
+        self.tabview.grid(row=2, column=0, sticky="nsew")
         
-        self.ocr_entries = {}
-        self.llm_entries = {}
-
-        # Buttons Frame
-        self.button_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
-        self.button_frame.grid(row=4, column=0, padx=20, pady=20)
-
-        # Save Button
-        self.save_btn = ctk.CTkButton(self.button_frame, text="Save Settings", command=self.save_settings)
-        self.save_btn.pack(side="left", padx=10)
-
-        # Revert Button
-        self.revert_btn = ctk.CTkButton(self.button_frame, text="Revert to Default", fg_color="transparent", border_width=2, text_color=("gray10", "#DCE4EE"), command=self.revert_to_default)
-        self.revert_btn.pack(side="left", padx=10)
-
-        self.load_initial_settings()
-
-    def revert_to_default(self):
-        from src.utils.config import FACTORY_DEFAULTS, save_config
-        from tkinter import messagebox
+        self.tab_ocr = self.tabview.add("OCR Engine")
+        self.tab_llm = self.tabview.add("LLM Service")
         
-        if messagebox.askyesno("Confirm", "Are you sure you want to revert all settings to factory defaults?"):
-            # Update the config file
-            save_config(FACTORY_DEFAULTS["OCR_SETTINGS"], FACTORY_DEFAULTS["LLM_SETTINGS"])
-            
-            # Clear current UI entries
-            self.input_dir_entry.delete(0, "end")
-            self.output_dir_entry.delete(0, "end")
-            
-            # Since load_initial_settings adds widgets, we need to clear frames first or just re-run with value updates
-            # A cleaner way is to just reload the values into existing widgets
-            
-            ocr_defaults = FACTORY_DEFAULTS["OCR_SETTINGS"]
-            llm_defaults = FACTORY_DEFAULTS["LLM_SETTINGS"]
-            
-            self.input_dir_entry.insert(0, ocr_defaults.get("default_input_dir", "data"))
-            self.output_dir_entry.insert(0, ocr_defaults.get("default_output_dir", "output"))
-            
-            for key, (entry, _) in self.ocr_entries.items():
-                if key in ocr_defaults:
-                    if isinstance(entry, ctk.CTkTextbox):
-                        entry.delete("1.0", "end")
-                        entry.insert("1.0", str(ocr_defaults[key]))
-                    else:
-                        entry.delete(0, "end")
-                        entry.insert(0, str(ocr_defaults[key]))
-                    
-            for key, (entry, _) in self.llm_entries.items():
-                if key in llm_defaults:
-                    if isinstance(entry, ctk.CTkTextbox):
-                        entry.delete("1.0", "end")
-                        entry.insert("1.0", str(llm_defaults[key]))
-                    else:
-                        entry.delete(0, "end")
-                        entry.insert(0, str(llm_defaults[key]))
-            
-            messagebox.showinfo("Success", "Settings reverted to defaults.")
-
-    def browse_directory(self, entry_widget):
-        directory = filedialog.askdirectory()
-        if directory:
-            entry_widget.delete(0, "end")
-            entry_widget.insert(0, directory)
-
-    def load_initial_settings(self):
-        try:
-            from src.utils.config import OCR_SETTINGS, LLM_SETTINGS
-            
-            # Paths
-            self.input_dir_entry.insert(0, OCR_SETTINGS.get("default_input_dir", "data"))
-            self.output_dir_entry.insert(0, OCR_SETTINGS.get("default_output_dir", "output"))
-
-            row = 1
-            for key, value in OCR_SETTINGS.items():
-                if key in ["default_input_dir", "default_output_dir"]:
-                    continue
-                
-                ctk.CTkLabel(self.ocr_frame, text=f"{key}:").grid(row=row, column=0, padx=10, pady=5, sticky="w")
-                
-                entry = ctk.CTkEntry(self.ocr_frame)
-                entry.insert(0, str(value))
-                entry.grid(row=row, column=1, padx=10, pady=5, sticky="ew")
-                
-                # Help Icon to the right
-                help_btn = ctk.CTkButton(self.ocr_frame, text="?", width=25, height=25, corner_radius=12, 
-                                        fg_color="#3B3B3B", hover_color="#555555",
-                                        command=lambda k=key: self.show_help(k))
-                help_btn.grid(row=row, column=2, padx=5, pady=5)
-
-                self.ocr_entries[key] = (entry, type(value))
-                row += 1
-            
-            row = 1
-            available_models = LLM_SETTINGS.get("available_models", ["deepseek-r1:8b"])
-            
-            for key, value in LLM_SETTINGS.items():
-                if key == "available_models":
-                    continue
-                    
-                ctk.CTkLabel(self.llm_frame, text=f"{key}:").grid(row=row, column=0, padx=10, pady=5, sticky="nw")
-                
-                if key.endswith("_model"):
-                    # Use OptionMenu for models
-                    entry = ctk.CTkOptionMenu(self.llm_frame, values=available_models)
-                    entry.set(str(value))
-                    entry.grid(row=row, column=1, padx=10, pady=5, sticky="ew")
-                elif key.endswith("_prompt"):
-                    # Use Textbox for prompts
-                    entry = ctk.CTkTextbox(self.llm_frame, height=100)
-                    entry.insert("1.0", str(value))
-                    entry.grid(row=row, column=1, padx=10, pady=5, sticky="ew")
-                else:
-                    entry = ctk.CTkEntry(self.llm_frame)
-                    entry.insert(0, str(value))
-                    entry.grid(row=row, column=1, padx=10, pady=5, sticky="ew")
-
-                # Help Icon to the right
-                help_btn = ctk.CTkButton(self.llm_frame, text="?", width=25, height=25, corner_radius=12, 
-                                        fg_color="#3B3B3B", hover_color="#555555",
-                                        command=lambda k=key: self.show_help(k))
-                help_btn.grid(row=row, column=2, padx=5, pady=5, sticky="n")
-
-                self.llm_entries[key] = (entry, type(value))
-                row += 1
-
-        except Exception as e:
-            logger.error(f"Error loading settings: {e}")
-
-    def show_help(self, key):
-        help_text = {
-            "lang": "Language code for OCR (e.g., 'en', 'ch').",
-            "use_angle_cls": "Enable text angle classification for rotated text.",
-            "show_log": "Display PaddleOCR internal logs in console.",
-            "ocr_version": "Version of the OCR model (e.g., PP-OCRv4).",
-            "use_gpu": "Use NVIDIA GPU (requires CUDA) for acceleration.",
-            "det_db_thresh": "Threshold for text detection binarization.",
-            "det_db_box_thresh": "Threshold for filtering detected text boxes.",
-            "det_db_unclip_ratio": "Expands detection boxes to prevent clipping.",
-            "det_limit_side_len": "Maximum side length for detection scaling.",
-            "drop_score": "Filter out text with confidence lower than this.",
-            "enable_mkldnn": "Use Intel MKLDNN for faster CPU processing.",
-            "cpu_threads": "Number of CPU threads to use.",
-            "rec_image_shape": "Input shape for the recognition model.",
-            "crop_padding": "Padding (in pixels) added around the text area during auto-crop.",
-            "auto_crop": "Automatically crop the image to text areas for better accuracy.",
-            "dump_text_flow": "Save raw and cleaned text to a .txt file in output/logs for auditing.",
-            "standard_prompt": "The main prompt for text cleaning. Use 'USE_DEFAULT' to use the built-in system prompt.",
-            "text_to_json_prompt": "The prompt for JSON conversion. Use 'USE_DEFAULT' to use the built-in system prompt.",
-            "step1_model": "Ollama model used for initial text cleaning/reasoning.",
-            "text_to_JSON_model": "Ollama model used for final data extraction.",
-            "models_path": "Local path where LLM models are stored.",
-            "max_loaded_models": "Maximum number of models kept in memory.",
-            "keep_alive": "How long models stay loaded in Ollama after use."
-        }
-        from tkinter import messagebox
-        messagebox.showinfo("Setting Info", help_text.get(key, "No description available."))
-
-    def save_settings(self):
-        from src.utils.config import save_config
+        self.ocr_pane = SettingsPane(self.tab_ocr, "OCR Parameters", OCR_SETTINGS, HELP_TEXT, fg_color="transparent")
+        self.ocr_pane.pack(fill="both", expand=True)
         
-        def parse_value(entry, target_type):
-            if isinstance(entry, ctk.CTkTextbox):
-                val_str = entry.get("1.0", "end-1c")
-            else:
-                val_str = entry.get()
-                
-            if target_type == bool:
-                return val_str.lower() in ("true", "1", "yes")
-            try:
-                return target_type(val_str)
-            except:
-                return val_str
+        self.llm_pane = SettingsPane(self.tab_llm, "LLM Parameters", LLM_SETTINGS, HELP_TEXT, fg_color="transparent")
+        self.llm_pane.pack(fill="both", expand=True)
 
-        updated_ocr = {k: parse_value(v[0], v[1]) for k, v in self.ocr_entries.items()}
-        updated_ocr["default_input_dir"] = self.input_dir_entry.get()
-        updated_ocr["default_output_dir"] = self.output_dir_entry.get()
+        # Footer Buttons
+        btn_frame = ctk.CTkFrame(self.main_container, fg_color="transparent")
+        btn_frame.grid(row=3, column=0, pady=20)
         
-        updated_llm = {k: parse_value(v[0], v[1]) for k, v in self.llm_entries.items()}
+        ctk.CTkButton(btn_frame, text="Save Settings", command=self.save_all).pack(side="left", padx=10)
+        ctk.CTkButton(btn_frame, text="Revert Defaults", fg_color="transparent", border_width=2, command=self.revert).pack(side="left", padx=10)
+
+    def _create_path_row(self, label, config_key, row):
+        ctk.CTkLabel(self.path_frame, text=label, font=ctk.CTkFont(weight="bold")).grid(row=row, column=0, padx=10, pady=10, sticky="w")
+        entry = ctk.CTkEntry(self.path_frame)
+        entry.insert(0, OCR_SETTINGS.get(config_key, ""))
+        entry.grid(row=row, column=1, padx=10, pady=10, sticky="ew")
+        ctk.CTkButton(self.path_frame, text="Browse", width=80, command=lambda e=entry: self._browse(e)).grid(row=row, column=2, padx=10, pady=10)
+        setattr(self, f"{config_key}_entry", entry)
+
+    def _browse(self, entry):
+        path = browse_directory()
+        if path:
+            entry.delete(0, "end")
+            entry.insert(0, path)
+
+    def save_all(self):
+        ocr_vals = self.ocr_pane.get_values()
+        ocr_vals["default_input_dir"] = self.default_input_dir_entry.get()
+        ocr_vals["default_output_dir"] = self.default_output_dir_entry.get()
         
-        save_config(updated_ocr, updated_llm)
-        from tkinter import messagebox
-        messagebox.showinfo("Success", "Settings saved successfully! Restart application for some changes to take effect.")
+        llm_vals = self.llm_pane.get_values()
+        
+        save_config(ocr_vals, llm_vals)
+        messagebox.showinfo("Success", "Configuration saved successfully.")
+
+    def revert(self):
+        if messagebox.askyesno("Confirm", "Revert to factory defaults?"):
+            self.ocr_pane.set_values(FACTORY_DEFAULTS["OCR_SETTINGS"])
+            self.llm_pane.set_values(FACTORY_DEFAULTS["LLM_SETTINGS"])
+            
+            self.default_input_dir_entry.delete(0, "end")
+            self.default_input_dir_entry.insert(0, FACTORY_DEFAULTS["OCR_SETTINGS"]["default_input_dir"])
+            self.default_output_dir_entry.delete(0, "end")
+            self.default_output_dir_entry.insert(0, FACTORY_DEFAULTS["OCR_SETTINGS"]["default_output_dir"])
 
     def open_batch_window(self):
-        if hasattr(self, "batch_window") and self.batch_window.winfo_exists():
-            self.batch_window.focus()
-            return
-        self.batch_window = BatchWindow(self)
+        if hasattr(self, "bw") and self.bw.winfo_exists():
+            self.bw.focus()
+        else:
+            self.bw = BatchWindow(self)
 
     def open_viewer_window(self):
-        if hasattr(self, "viewer_window") and self.viewer_window.winfo_exists():
-            self.viewer_window.focus()
-            return
-        self.viewer_window = ImageViewerWindow(self)
-
-    def change_appearance_mode_event(self, new_appearance_mode: str):
-        ctk.set_appearance_mode(new_appearance_mode)
+        if hasattr(self, "vw") and self.vw.winfo_exists():
+            self.vw.focus()
+        else:
+            self.vw = ImageViewerWindow(self)
 
 if __name__ == "__main__":
     app = Dashboard()
