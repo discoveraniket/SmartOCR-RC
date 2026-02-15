@@ -1,11 +1,42 @@
-import os
+from pathlib import Path
 import json
+from typing import Dict, Any, List, TypedDict, Union
 
-CONFIG_FILE = "config.json"
+CONFIG_FILE = Path("config.json")
+
+class OcrSettings(TypedDict):
+    lang: str
+    use_angle_cls: bool
+    show_log: bool
+    ocr_version: str
+    use_gpu: bool
+    det_db_thresh: float
+    det_db_box_thresh: float
+    det_db_unclip_ratio: float
+    det_limit_side_len: int
+    drop_score: float
+    enable_mkldnn: bool
+    cpu_threads: int
+    rec_image_shape: str
+    default_input_dir: str
+    default_output_dir: str
+    crop_padding: int
+    auto_crop: bool
+    dump_text_flow: bool
+
+class LlmSettings(TypedDict):
+    step1_model: str
+    text_to_JSON_model: str
+    available_models: List[str]
+    models_path: str
+    max_loaded_models: str
+    keep_alive: str
+    standard_prompt: str
+    text_to_json_prompt: str
 
 # --- DEFAULT CONFIGURATION SETTINGS ---
 
-FACTORY_DEFAULTS = {
+FACTORY_DEFAULTS: Dict[str, Any] = {
     "OCR_SETTINGS": {
         "lang": "en",
         "use_angle_cls": True,
@@ -67,26 +98,28 @@ LLM_SETTINGS = FACTORY_DEFAULTS["LLM_SETTINGS"].copy()
 KEY_MAP = FACTORY_DEFAULTS["KEY_MAP"].copy()
 
 def load_config():
+    """Loads configuration from JSON file, merging with factory defaults."""
     global OCR_SETTINGS, LLM_SETTINGS, KEY_MAP
-    if os.path.exists(CONFIG_FILE):
+    if CONFIG_FILE.exists():
         try:
-            with open(CONFIG_FILE, "r") as f:
-                config = json.load(f)
-                OCR_SETTINGS.update(config.get("OCR_SETTINGS", {}))
-                LLM_SETTINGS.update(config.get("LLM_SETTINGS", {}))
-                KEY_MAP.update(config.get("KEY_MAP", {}))
+            with CONFIG_FILE.open("r", encoding="utf-8") as f:
+                config_data = json.load(f)
+                OCR_SETTINGS.update(config_data.get("OCR_SETTINGS", {}))
+                LLM_SETTINGS.update(config_data.get("LLM_SETTINGS", {}))
+                KEY_MAP.update(config_data.get("KEY_MAP", {}))
         except Exception as e:
             print(f"Error loading config: {e}")
 
-def save_config(ocr_settings, llm_settings, key_map=None):
-    config = {
+def save_config(ocr_settings: dict, llm_settings: dict, key_map: dict = None):
+    """Saves current configuration to JSON file."""
+    config_data = {
         "OCR_SETTINGS": ocr_settings,
         "LLM_SETTINGS": llm_settings,
         "KEY_MAP": key_map or KEY_MAP
     }
     try:
-        with open(CONFIG_FILE, "w") as f:
-            json.dump(config, f, indent=4)
+        with CONFIG_FILE.open("w", encoding="utf-8") as f:
+            json.dump(config_data, f, indent=4)
     except Exception as e:
         print(f"Error saving config: {e}")
 

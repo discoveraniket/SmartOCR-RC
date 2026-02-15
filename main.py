@@ -13,25 +13,54 @@ def setup_logging():
         force=True
     )
 
+from pathlib import Path
+from src.core.batch_processor import BatchProcessor
+
 def run_cli():
-    DATA_DIR = "data"
+    """Runs the processing pipeline in command-line mode."""
+    data_dir = Path("data")
+    output_dir = Path("output")
     
-    if not os.path.exists(DATA_DIR):
-        print(f"Directory {DATA_DIR} does not exist.")
+    if not data_dir.exists():
+        print(f"Directory {data_dir} does not exist.")
         sys.exit(1)
 
-    image_extensions = ('.jpg', '.jpeg', '.png', '.bmp', '.tiff')
-    images = [f for f in os.listdir(DATA_DIR) if f.lower().endswith(image_extensions)]
+    print(f"Scanning {data_dir} for images...")
+    processor = BatchProcessor(str(data_dir), str(output_dir))
+    count = processor.discover_files()
     
-    if not images:
-        print(f"No images found in {DATA_DIR}")
+    if count == 0:
+        print(f"No images found in {data_dir}")
         sys.exit(0)
 
-    coordinator = PipelineCoordinator()
-    for image_name in images:
-        image_path = os.path.join(DATA_DIR, image_name)
-        print(f"Processing: {image_path}")
-        coordinator.process_image(image_path)
+    print(f"Found {count} images. Starting processing...")
+    
+    # Simple synchronous wrapper for CLI
+    processed = 0
+    def on_progress(stats, current_file, last_speeds):
+        nonlocal processed
+        if stats['processed'] + stats['errors'] > processed:
+            processed = stats['processed'] + stats['errors']
+            print(f"[{processed}/{count}] Processed: {current_file}")
+
+    def on_complete(stats):
+        print("\n--- Batch Processing Complete ---")
+        print(f"Total: {stats['total']}")
+        print(f"Success: {stats['processed']}")
+        print(f"Errors: {stats['errors']}")
+        print(f"Elapsed: {stats['elapsed']:.2f}s")
+
+    # For CLI, we might want a synchronous version, but since BatchProcessor 
+    # is designed for async with callbacks, we'll wait for it.
+    import threading
+    completion_event = threading.Event()
+    
+    def sync_complete(stats):
+        on_complete(stats)
+        completion_event.set()
+
+    processor.start(progress_callback=on_progress, completion_callback=sync_complete)
+    completion_event.wait()
 
 def main():
     parser = argparse.ArgumentParser(description="RC-PaddleOCR Processor")

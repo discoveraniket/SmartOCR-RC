@@ -1,14 +1,13 @@
 import logging
-import os
+from pathlib import Path
 from PIL import Image
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Union
 
 logger = logging.getLogger(__name__)
 
 class ImageProcessingService:
     """
     Modular service for image manipulation based on OCR data.
-    Separates cropping logic from the UI for future use in batch processing.
     """
     
     @staticmethod
@@ -20,20 +19,15 @@ class ImageProcessingService:
         if not ocr_results:
             return None
 
-        min_x = float('inf')
-        min_y = float('inf')
-        max_x = 0
-        max_y = 0
+        # Flatten all points from all boxes to find min/max coordinates
+        all_points = [point for item in ocr_results for point in item.get('box', [])]
+        if not all_points:
+            return None
 
-        for item in ocr_results:
-            # PaddleOCR box format: [[x1,y1], [x2,y2], [x3,y3], [x4,y4]]
-            box = item.get('box', [])
-            for point in box:
-                x, y = point
-                min_x = min(min_x, x)
-                min_y = min(min_y, y)
-                max_x = max(max_x, x)
-                max_y = max(max_y, y)
+        min_x = min(p[0] for p in all_points)
+        min_y = min(p[1] for p in all_points)
+        max_x = max(p[0] for p in all_points)
+        max_y = max(p[1] for p in all_points)
 
         return (
             max(0, int(min_x) - padding),
@@ -44,8 +38,7 @@ class ImageProcessingService:
 
     @staticmethod
     def crop_to_content(image: Image.Image, bounds: Tuple[int, int, int, int]) -> Image.Image:
-        """Crops the PIL image to the specified bounds."""
-        # Ensure bounds don't exceed image dimensions
+        """Crops the PIL image to the specified bounds, ensuring they stay within image dimensions."""
         w, h = image.size
         safe_bounds = (
             max(0, bounds[0]),
@@ -56,14 +49,14 @@ class ImageProcessingService:
         return image.crop(safe_bounds)
 
     @staticmethod
-    def save_image(image: Image.Image, path: str):
-        """Saves the PIL image to the specified path."""
+    def save_image(image: Image.Image, path: Union[str, Path]) -> bool:
+        """Saves the PIL image to the specified path, ensuring directories exist."""
         try:
-            # Ensure output directory exists
-            os.makedirs(os.path.dirname(path), exist_ok=True)
+            path = Path(path)
+            path.parent.mkdir(parents=True, exist_ok=True)
             image.save(path, quality=95, subsampling=0)
             logger.info(f"Image saved successfully to {path}")
             return True
         except Exception as e:
-            logger.error(f"Failed to save image: {e}")
+            logger.error(f"Failed to save image at {path}: {e}")
             return False

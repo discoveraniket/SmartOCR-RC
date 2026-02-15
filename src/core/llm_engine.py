@@ -78,8 +78,12 @@ class LlmInferenceEngine:
         self.model_manager = ModelManager()
 
     def generate_response(self, model: str, prompt: str, format: Optional[str] = None, think: bool = False) -> Optional[Dict[str, Any]]:
-        """Generic method to generate a response from Ollama."""
+        """
+        Generic method to generate a response from Ollama.
+        Returns a dict with 'answer', 'thinking', and 'duration' or None on failure.
+        """
         if not self.model_manager.ensure_model_loaded(model):
+            logger.error(f"Failed to load model: {model}")
             return None
             
         try:
@@ -89,30 +93,8 @@ class LlmInferenceEngine:
                 "thinking": response.get('thinking', '').strip() if think else None,
                 "duration": response.get('total_duration', 0) / 1e9  # Convert nanoseconds to seconds
             }
+        except ollama.ResponseError as e:
+            logger.error(f"Ollama API error for model '{model}': {e}")
         except Exception as e:
-            logger.error(f"Inference failed for model '{model}': {e}")
-            return None
-
-# --- Facade for Backward Compatibility ---
-
-class LlmManager:
-    """Facade class to maintain compatibility with existing code."""
-    
-    def __init__(self, model_name: str = None):
-        self.engine = LlmInferenceEngine()
-        # Set environment variable in init as well for safety
-        models_path = config.LLM_SETTINGS.get("models_path")
-        if models_path:
-            os.environ["OLLAMA_MODELS"] = models_path
-
-    def initialize_service(self) -> bool:
-        """Starts Ollama service."""
-        return OllamaServiceManager.ensure_running()
-
-    def clean_text(self, model: str, prompt: str, think: bool = False) -> Optional[Dict[str, Any]]:
-        """Step 2: Deep Extraction."""
-        return self.engine.generate_response(model, prompt, think=think)
-
-    def to_json(self, model: str, prompt: str) -> Optional[Dict[str, Any]]:
-        """Step 3: Text-to-JSON Conversion."""
-        return self.engine.generate_response(model, prompt, format="json", think=False)
+            logger.error(f"Unexpected inference failure for model '{model}': {e}")
+        return None

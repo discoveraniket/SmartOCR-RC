@@ -1,31 +1,26 @@
 import logging
 import csv
-import os
 import shutil
-from typing import Dict, Any, List
+from pathlib import Path
+from typing import Dict, Any, List, Union
 
 logger = logging.getLogger(__name__)
 
 class DirectoryUtility:
     """Handles directory-level operations."""
     @staticmethod
-    def ensure_dir_for_file(file_path: str) -> None:
-        directory = os.path.dirname(file_path)
-        if directory:
-            os.makedirs(directory, exist_ok=True)
+    def ensure_dir_for_file(file_path: Union[str, Path]) -> None:
+        Path(file_path).parent.mkdir(parents=True, exist_ok=True)
 
 class LogFormatter:
     """Handles formatting of data for audit logs."""
     @staticmethod
     def format_ocr_spatial_data(ocr_results: List[Dict[str, Any]]) -> str:
         """Formats OCR results with coordinates and confidence for auditing."""
-        lines = [
-            "="*30,
-            "DETAILED OCR SPATIAL DATA",
-            "="*30,
-            f"{'TEXT':<40} | {'CONF':<6} | {'X,Y COORDS':<15}",
-            "-"*70
-        ]
+        header = "="*30 + "\nDETAILED OCR SPATIAL DATA\n" + "="*30
+        cols = f"{'TEXT':<40} | {'CONF':<6} | {'X,Y COORDS':<15}\n" + "-"*70
+        
+        lines = [header, cols]
         for item in ocr_results:
             pos = f"{int(item['x'])},{int(item['y'])}"
             lines.append(f"{item['text']:<40} | {item['confidence']:.3f} | {pos}")
@@ -33,34 +28,32 @@ class LogFormatter:
 
     @staticmethod
     def format_llm_result(result: Dict[str, Any]) -> str:
-        lines = [
-            "\n" + "="*30,
-            "LLM DATA CLEANING RESULT",
-            "="*30
-        ]
+        header = "\n" + "="*30 + "\nLLM DATA CLEANING RESULT\n" + "="*30
+        content = []
         if result.get('thinking'):
-            lines.append(f"REASONING:{result['thinking']}")
+            content.append(f"REASONING:{result['thinking']}")
         
-        lines.append(f"FINAL ANSWER:{result['answer']}\n")
-        return "\n".join(lines)
+        content.append(f"FINAL ANSWER:{result['answer']}\n")
+        return header + "\n" + "\n".join(content)
 
 class TextFileHandler:
     """Handles basic text file I/O."""
     @staticmethod
-    def write(path: str, content: str) -> None:
+    def write(path: Union[str, Path], content: str) -> None:
         try:
-            DirectoryUtility.ensure_dir_for_file(path)
-            with open(path, "w", encoding="utf-8") as f:
-                f.write(content)
+            path = Path(path)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(content, encoding="utf-8")
             logger.info(f"File saved successfully to {path}")
         except IOError as e:
             logger.error(f"Failed to save file {path}: {e}")
 
     @staticmethod
-    def append(path: str, content: str) -> None:
+    def append(path: Union[str, Path], content: str) -> None:
         try:
-            DirectoryUtility.ensure_dir_for_file(path)
-            with open(path, "a", encoding="utf-8") as f:
+            path = Path(path)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with path.open("a", encoding="utf-8") as f:
                 f.write(content)
             logger.info(f"Content appended to {path}")
         except IOError as e:
@@ -69,13 +62,14 @@ class TextFileHandler:
 class CSVFileHandler:
     """Handles CSV specific I/O."""
     @staticmethod
-    def append_row(path: str, data: Dict[str, Any]) -> None:
+    def append_row(path: Union[str, Path], data: Dict[str, Any]) -> None:
         try:
-            DirectoryUtility.ensure_dir_for_file(path)
-            file_exists = os.path.isfile(path)
+            path = Path(path)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            file_exists = path.is_file()
             fieldnames = list(data.keys())
             
-            with open(path, 'a', newline='', encoding='utf-8') as csvfile:
+            with path.open('a', newline='', encoding='utf-8') as csvfile:
                 writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
                 if not file_exists:
                     writer.writeheader()
@@ -87,16 +81,17 @@ class CSVFileHandler:
 class ImageFileHandler:
     """Handles image file operations."""
     @staticmethod
-    def copy_and_rename(src_path: str, dst_dir: str, new_name: str) -> str:
+    def copy_and_rename(src_path: Union[str, Path], dst_dir: Union[str, Path], new_name: str) -> str:
         try:
-            os.makedirs(dst_dir, exist_ok=True)
-            dst_path = os.path.join(dst_dir, new_name)
+            dst_dir = Path(dst_dir)
+            dst_dir.mkdir(parents=True, exist_ok=True)
+            dst_path = dst_dir / new_name
             shutil.copy2(src_path, dst_path)
             logger.info(f"Image copied from {src_path} to {dst_path}")
-            return dst_path
+            return str(dst_path)
         except (IOError, shutil.Error) as e:
             logger.error(f"Failed to copy image {src_path}: {e}")
-            return src_path
+            return str(src_path)
 
 # --- Public API Facade (Backward Compatibility) ---
 
