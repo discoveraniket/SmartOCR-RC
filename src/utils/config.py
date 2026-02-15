@@ -1,8 +1,12 @@
-from pathlib import Path
 import json
-from typing import Dict, Any, List, TypedDict, Union
+import logging
+from pathlib import Path
+from typing import Dict, Any, List, TypedDict
+
+logger = logging.getLogger(__name__)
 
 CONFIG_FILE = Path("config.json")
+PROMPTS_DIR = Path("src/resources/prompts")
 
 class OcrSettings(TypedDict):
     lang: str
@@ -33,8 +37,6 @@ class LlmSettings(TypedDict):
     keep_alive: str
     standard_prompt: str
     text_to_json_prompt: str
-
-# --- DEFAULT CONFIGURATION SETTINGS ---
 
 FACTORY_DEFAULTS: Dict[str, Any] = {
     "OCR_SETTINGS": {
@@ -80,19 +82,21 @@ FACTORY_DEFAULTS: Dict[str, Any] = {
     }
 }
 
-#--------------Keep this list---------------
-# deepseek-r1:8b                6995872bfe4c    5.2 GB    3 minutes ago
-# llama3.2:3b                   a80c4f17acd5    2.0 GB    7 hours ago
-# moondream:1.8b                55fc3abd3867    1.7 GB    10 hours ago
-# qwen2.5:0.5b                  a8b0c5157701    397 MB    12 hours ago
-# qwen3-vl:8b                   901cae732162    6.1 GB    31 hours ago
-# qwen2.5vl:3b                  fb90415cde1e    3.2 GB    39 hours ago
-# llava:7b_q8                   08b71b1c4899    8.3 GB    3 months ago
-# llava:7b-v1.6-mistral-q8_0    c2973e390e84    8.3 GB    3 months ago
-# llava:7b_custom               ede6315df27f    4.7 GB    3 months ago
-# llava:7b                      8dd30f6b0cb1    4.7 GB    3 months ago
-# llava-phi3:latest             c7edd7b87593    2.9 GB    3 months ago
+def load_prompt(filename: str) -> str:
+    """Loads a prompt from the resources directory."""
+    path = PROMPTS_DIR / filename
+    if path.exists():
+        return path.read_text(encoding="utf-8")
+    logger.warning(f"Prompt file not found: {path}")
+    return ""
 
+# Load static prompts
+STANDARD_PROMPT = load_prompt("standard_prompt.txt")
+STANDARD_PROMPT1 = load_prompt("standard_prompt1.txt")
+THINKING_PROMPT = load_prompt("thinking_prompt.txt")
+TEXT_TO_JSON_PROMPT = load_prompt("text_to_json.txt")
+
+# Global instances for backward compatibility
 OCR_SETTINGS = FACTORY_DEFAULTS["OCR_SETTINGS"].copy()
 LLM_SETTINGS = FACTORY_DEFAULTS["LLM_SETTINGS"].copy()
 KEY_MAP = FACTORY_DEFAULTS["KEY_MAP"].copy()
@@ -108,7 +112,7 @@ def load_config():
                 LLM_SETTINGS.update(config_data.get("LLM_SETTINGS", {}))
                 KEY_MAP.update(config_data.get("KEY_MAP", {}))
         except Exception as e:
-            print(f"Error loading config: {e}")
+            logger.error(f"Error loading config: {e}")
 
 def save_config(ocr_settings: dict, llm_settings: dict, key_map: dict = None):
     """Saves current configuration to JSON file."""
@@ -121,125 +125,7 @@ def save_config(ocr_settings: dict, llm_settings: dict, key_map: dict = None):
         with CONFIG_FILE.open("w", encoding="utf-8") as f:
             json.dump(config_data, f, indent=4)
     except Exception as e:
-        print(f"Error saving config: {e}")
+        logger.error(f"Error saving config: {e}")
 
 # Initial load
 load_config()
-
-STANDARD_PROMPT = """
-### ROLE
-You are a precision data extraction engine specialized in processing messy OCR text from official documents.
-
-### TASK
-Extract specific data points from the provided OCR text and return them in a strictly structured JSON format.
-
-### EXTRACTION RULES
-1. **Ration Card ID**:
-   - Locate keywords "Ration Card ID :" or similar as OCR might misspell it.
-   - The ID consists of two parts:
-     - Category (Alphabetic code): Any one of ["AAY", "PHH", "SPHH", "RKSY-I", "RKSY-II"]
-     - ID (Numeric): exactly 10 digits.
-   - *Correction Logic*: If the OCR has joined the category and ID (e.g., "SPHH1234567890"), split them. If the category is misspelled, map it to the nearest valid entry from the list above.
-
-2. **Card Holder Name**:
-   - Locate the keyword "Name of the Card Holder:" or similar OCR variations.
-   - Extract the name (FirstName LastName) following this label.
-   - Names are mostly 2 or 3 words (e.g. ANIKET SARKAR OR ARITRA KUMAR PATRA).
-   - Ignore dealer name or father name or husban name for this.
-   - If a 12 digit number is present with the name, ignore it as dealer name. [e.g. ALOKESH MISHRA(134000500036)] here "ALOKESH MISHRA" is dealer name, so it must be ignored.
-
-3. **Mobile Number**:
-    - The mobile number "9903055505" is wrong number. If you see it ignore it.
-    - **Location**: Most likely found in the final 20% of the text or the last few lines. if not there, you should look for it in the entire text.
-    - **OCR Correction**:
-    - Replace common character misreads: 'or 'o' -> '0', 'I' or 'l' -> '1', 'S' -> '5, 'B' -> '8'.
-    - **Digit Count**: If the count is slightly off (e.g., 9 or 11 digits), use surrounding context to determine if a digit was missed or added by OCR and normalize it to 10 digits if possible; dont return null.
-    - If you cannot find the mobile number, consider the last digit like string as the mobile number.
-
-### CONSTRAINTS
-- **No Dummy Data**: If a field is not found, return `null`. Do not invent placeholders.
-- **OCR Resilience**: Correct common OCR character substitutions (e.g., 'O' instead of '0' in the numeric ID).
-- **Format**: Output ONLY valid JSON. No conversational filler or explanations.
-
-### OUTPUT SCHEMA
-{
-    "category" : "String (AAY, PHH, SPHH, RKSY-I, or RKSY-II)",
-    "id" : "String (10 digits)",
-    "name" : "String (Upper Case)",
-    "mobile" : "String (10 digits)"
-}
-"""
-
-STANDARD_PROMPT1 = """
-You are a precision data extraction tool. Your task is to extract the 'Ration Card ID' from the provided OCR text.
-
-RULES:
-1. Look for the keyword "Ration Card ID :" or similar (OCR might misspell it as "Ratioa Card" or "Ratio Card").
-2. The ID consists of two parts:
-   - Category (Alphabetic code): One of ["AAY", "PHH", "SPHH", "RKSY-I", "RKSY-II"]
-   - ID (Numeric): exactly 10 digits.
-3. IMPORTANT: If the OCR is messy or joined, separate them and correct the code to the nearest valid category.
-4. Look for the keyword "Name of the Card Holder:" or similar (OCR might misspell it)
-    - Following the "Name of the Card Holder:" is a name. extract it as "name"
-5. Look for a 10 digit indian mobile number. Usually found at the end of the text string. Extract it as "mobile". make sure its digit only.
-4. Do not use dummy data. Use only the ID present in the text.
-
-Example JSON:
-{{
-    "category" : "SPHH",
-    "id" : "1234567890",
-    "name" : "FIRSTNAME LASTNAME",
-    "mobile" : "0123456789"
-}}
-
-Output ONLY valid JSON.
-"""
-
-# Thinking models benefit from instructions to use their scratchpad
-THINKING_PROMPT = """
-You are an expert reasoning agent. Your task is to analyze messy OCR text and extract the 'Ration Card ID'.
-
-ANALYSIS STEPS:
-1. Identify potential Ration Card ID keywords (e.g., "Ratioa Card").
-2. Locate the numeric part (10 digits).
-3. Identify the prefix category. If it's garbled (e.g. SPHN), determine which valid category it is meant to be from this list: ["AAY", "PHH", "SPHH", "RKSY-I", "RKSY-II"].
-4. Verify the final ID against the rules.
-
-Output ONLY valid JSON after your reasoning.
-JSON structure:
-{{
-    "category" : "CODE",
-    "id" : "1234567890"
-}}
-"""
-# Kept this for backup
-# TEXT_TO_JSON_PROMPT = """
-# Convert this text into a JSON object
-# JSON Template:
-# {{
-#     "category" : "SPHH",
-#     "id" : "1234567890",
-#     "name" : "String (Upper Case)",
-#     "mobile" : "String (10 digits)"
-# }}
-# """
-TEXT_TO_JSON_PROMPT = """
-Role: ACT AS A DATA EXTRACTOR.
-Task: Convert the following data into JSON
-
-### EXPECTED JSON TEMPLATE:
-{
-    "category" :
-    "id" :
-    "name" :
-    "mobile" :
-}
-
-### RULES:
-1. Use the keys defined in the JSON TEMPLATE.
-2. Fill the values EXACTLY as they appear in the SOURCE TEXT.
-3. Do not modify formatting, casing, or spacing of the values.
-4. Output only the raw JSON object, no lists.
-"""
-
-# image_viewer.py -> entry_font = ctk.CTkFont(size=30)

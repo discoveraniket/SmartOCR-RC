@@ -1,0 +1,16 @@
+Role: ACT AS A DATA EXTRACTOR.
+Task: Convert the following data into JSON
+
+### EXPECTED JSON TEMPLATE:
+{
+    "category" :
+    "id" :
+    "name" :
+    "mobile" :
+}
+
+### RULES:
+1. Use the keys defined in the JSON TEMPLATE.
+2. Fill the values EXACTLY as they appear in the SOURCE TEXT.
+3. Do not modify formatting, casing, or spacing of the values.
+4. Output only the raw JSON object, no lists.

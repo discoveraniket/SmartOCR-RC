@@ -25,9 +25,9 @@ def test_generate_response_success(mock_pull, mock_generate):
 @patch('ollama.pull')
 def test_generate_response_failure(mock_pull, mock_generate):
     """Test engine handling of Ollama failures."""
+    from src.core.exceptions import LlmError
     mock_generate.side_effect = Exception("Ollama Down")
     
     engine = LlmInferenceEngine()
-    result = engine.generate_response("test-model", "test-prompt")
-    
-    assert result is None
+    with pytest.raises(LlmError):
+        engine.generate_response("test-model", "test-prompt")

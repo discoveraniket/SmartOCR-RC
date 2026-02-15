@@ -5,6 +5,7 @@ import subprocess
 import ollama
 from src.utils import config
 from typing import Optional, Dict, Any
+from src.core.exceptions import ServiceUnavailableError, LlmError
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +21,6 @@ class OllamaServiceManager:
         except Exception:
             logger.info("Starting Ollama service...")
             try:
-                # Use models path from config if available
                 models_path = config.LLM_SETTINGS.get("models_path")
                 max_models = config.LLM_SETTINGS.get("max_loaded_models", "3")
                 keep_alive = config.LLM_SETTINGS.get("keep_alive", "5m")
@@ -40,7 +40,7 @@ class OllamaServiceManager:
                     creationflags=subprocess.CREATE_NEW_CONSOLE if os.name == 'nt' else 0
                 )
                 
-                # Wait for service to respond
+                # Wait for service to respond (up to 10 seconds)
                 for _ in range(5):
                     time.sleep(2)
                     try:
@@ -74,27 +74,30 @@ class ModelManager:
 class LlmInferenceEngine:
     """Handles communication with Ollama for text generation."""
     
-    def __init__(self):
-        self.model_manager = ModelManager()
+    def __init__(self, model_manager: Optional[ModelManager] = None):
+        self.model_manager = model_manager or ModelManager()
 
     def generate_response(self, model: str, prompt: str, format: Optional[str] = None, think: bool = False) -> Optional[Dict[str, Any]]:
         """
-        Generic method to generate a response from Ollama.
-        Returns a dict with 'answer', 'thinking', and 'duration' or None on failure.
+        Generates a response from Ollama.
+        Raises ServiceUnavailableError if Ollama is down.
+        Raises LlmError if inference fails.
         """
         if not self.model_manager.ensure_model_loaded(model):
-            logger.error(f"Failed to load model: {model}")
-            return None
+            raise LlmError(f"Failed to load/pull model: {model}")
             
         try:
             response = ollama.generate(model=model, prompt=prompt, format=format, think=think)
             return {
                 "answer": response.get('response', '').strip(),
                 "thinking": response.get('thinking', '').strip() if think else None,
-                "duration": response.get('total_duration', 0) / 1e9  # Convert nanoseconds to seconds
+                "duration": response.get('total_duration', 0) / 1e9
             }
         except ollama.ResponseError as e:
-            logger.error(f"Ollama API error for model '{model}': {e}")
+            logger.error(f"Ollama API error: {e}")
+            raise LlmError(f"Ollama API error: {e}")
         except Exception as e:
-            logger.error(f"Unexpected inference failure for model '{model}': {e}")
-        return None
+            if "connection" in str(e).lower():
+                raise ServiceUnavailableError("Could not connect to Ollama service.")
+            logger.error(f"Unexpected inference failure: {e}")
+            raise LlmError(f"Unexpected inference failure: {e}")

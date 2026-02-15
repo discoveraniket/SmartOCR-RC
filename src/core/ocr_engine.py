@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import List, Any, Dict, Optional, Union
 from paddleocr import PaddleOCR
 from src.utils import config
+from src.core.exceptions import OcrError
 
 logger = logging.getLogger(__name__)
 
@@ -28,8 +29,7 @@ class OCRResultProcessor:
                     "box": box
                 })
 
-        # Sort primarily by Y (with 15px line grouping to handle slight tilts) 
-        # and secondarily by X (left-to-right)
+        # Sort primarily by Y (with 15px line grouping) and secondarily by X
         extracted_data.sort(key=lambda r: (r['y'] // 15, r['x']))
         return extracted_data
 
@@ -41,23 +41,25 @@ class OcrEngine:
         try:
             settings = config.OCR_SETTINGS.copy()
             settings.update(overrides)
-            # Filter settings to only include what PaddleOCR expects if needed
             self.client = PaddleOCR(**settings)
         except Exception as e:
             logger.error(f"Failed to initialize PaddleOCR engine: {e}")
-            raise
+            raise OcrError(f"Failed to initialize PaddleOCR: {e}")
 
     def run_inference(self, image: Union[str, Path, Any]) -> Any:
         """Executes the raw OCR process on an image file or numpy array."""
-        # Convert Path to str as PaddleOCR might expect string
-        img_input = str(image) if isinstance(image, Path) else image
-        return self.client.ocr(img_input, cls=True)
+        try:
+            img_input = str(image) if isinstance(image, Path) else image
+            return self.client.ocr(img_input, cls=True)
+        except Exception as e:
+            logger.error(f"OCR inference failed: {e}")
+            raise OcrError(f"OCR inference failed: {e}")
 
 class OcrProcessor:
     """Facade for OCR operations."""
     
-    def __init__(self):
-        self.engine = OcrEngine()
+    def __init__(self, engine: Optional[OcrEngine] = None):
+        self.engine = engine or OcrEngine()
         self.processor = OCRResultProcessor()
 
     def extract_text(self, image_path: Union[str, Path]) -> List[Dict[str, Any]]:
@@ -71,8 +73,10 @@ class OcrProcessor:
             logger.info(f"Running OCR on {image_path}...")
             raw_result = self.engine.run_inference(image_path)
             return self.processor.process_paddle_output(raw_result)
+        except OcrError:
+            return []
         except Exception as e:
-            logger.error(f"OCR execution failed for {image_path}: {e}")
+            logger.error(f"Unexpected OCR failure for {image_path}: {e}")
             return []
 
     def _validate_image(self, image_path: Union[str, Path]) -> bool:

@@ -1,0 +1,14 @@
+You are an expert reasoning agent. Your task is to analyze messy OCR text and extract the 'Ration Card ID'.
+
+ANALYSIS STEPS:
+1. Identify potential Ration Card ID keywords (e.g., "Ratioa Card").
+2. Locate the numeric part (10 digits).
+3. Identify the prefix category. If it's garbled (e.g. SPHN), determine which valid category it is meant to be from this list: ["AAY", "PHH", "SPHH", "RKSY-I", "RKSY-II"].
+4. Verify the final ID against the rules.
+
+Output ONLY valid JSON after your reasoning.
+JSON structure:
+{{
+    "category" : "CODE",
+    "id" : "1234567890"
+}}
