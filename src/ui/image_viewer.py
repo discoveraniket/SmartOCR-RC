@@ -200,6 +200,15 @@ class ImageViewerWindow(ctk.CTkToplevel):
         )
         self.delete_btn.pack(side="left")
 
+        # Metrics info
+        self.metrics_label = ctk.CTkLabel(
+            self.side_panel, text="", 
+            font=ctk.CTkFont(size=11), 
+            text_color="#AAAAAA",
+            justify="left"
+        )
+        self.metrics_label.pack(side="bottom", fill="x", padx=15, pady=(0, 5))
+
         # Status/Toast
         self.toast_label = ctk.CTkLabel(self.side_panel, text="", font=ctk.CTkFont(size=12, weight="bold"))
         self.toast_label.pack(side="bottom", pady=10)
@@ -233,6 +242,9 @@ class ImageViewerWindow(ctk.CTkToplevel):
 
         image_name = item.get('processed_image_name', 'Unknown')
         self.filename_label.configure(text=image_name)
+        
+        # Reset metrics display
+        self.metrics_label.configure(text="")
 
         img_path = self.handler.get_image_path(item)
         if img_path and os.path.exists(img_path):
@@ -344,8 +356,21 @@ class ImageViewerWindow(ctk.CTkToplevel):
                         if k in data:
                             v.delete(0, "end")
                             v.insert(0, str(data[k]))
+                    
+                    # Update metrics display
+                    m = pipeline_result.metrics
+                    model1 = self.model_overrides.get("step1_model") or LLM_SETTINGS.get("step1_model")
+                    model2 = self.model_overrides.get("text_to_JSON_model") or LLM_SETTINGS.get("text_to_JSON_model")
+                    
+                    metrics_text = (
+                        f"LLM Step 1 ({model1}): {m.step1_duration}s\n"
+                        f"LLM JSON ({model2}): {m.json_duration}s"
+                    )
+                    self.metrics_label.configure(text=metrics_text)
+                    
                     self.notifier.show("AI Extraction Successful ✓")
                 else: 
+                    self.metrics_label.configure(text="AI Reprocessing failed")
                     messagebox.showerror("Error", "AI reprocessing failed.")
                 self.focus_set()
             self.after(0, _update_ui)
