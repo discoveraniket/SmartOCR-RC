@@ -143,6 +143,23 @@ class BatchWindow(ctk.CTkToplevel):
             entry.delete(0, "end")
             entry.insert(0, directory)
 
+    def check_readiness(self):
+        """Checks if both OCR and LLM engines are ready."""
+        from src.core.ocr_engine import OcrEngine
+        from src.core.llm_engine import LlmInferenceEngine
+        
+        ocr = OcrEngine(show_log=False)
+        if not ocr.is_ready():
+            messagebox.showerror("Dependency Error", "OCR Engine is not ready. Please check if 'paddleocr' is installed correctly.")
+            return False
+            
+        llm = LlmInferenceEngine()
+        if not llm.is_ready():
+            if not messagebox.askyesno("LLM Warning", "Ollama service is not responding. Batch processing will fail at the cleaning stage. Continue anyway?"):
+                return False
+        
+        return True
+
     def log(self, message):
         self.log_textbox.configure(state="normal")
         self.log_textbox.insert("end", f">>> {message}\n")
@@ -177,6 +194,9 @@ class BatchWindow(ctk.CTkToplevel):
         self.after(0, _update)
 
     def start_session(self):
+        if not self.check_readiness():
+            return
+
         input_dir = self.input_entry.get()
         output_dir = self.output_entry.get()
         

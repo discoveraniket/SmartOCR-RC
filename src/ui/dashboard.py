@@ -49,6 +49,9 @@ class Dashboard(ctk.CTk):
         self._setup_layout()
         self._setup_sidebar()
         self._setup_main_content()
+        self._setup_status_bar()
+        
+        self.after(500, self.check_dependencies)
 
     def _setup_layout(self):
         self.grid_columnconfigure(1, weight=1)
@@ -104,6 +107,91 @@ class Dashboard(ctk.CTk):
         
         ctk.CTkButton(btn_frame, text="Save Settings", command=self.save_all).pack(side="left", padx=10)
         ctk.CTkButton(btn_frame, text="Revert Defaults", fg_color="transparent", border_width=2, command=self.revert).pack(side="left", padx=10)
+
+    def _setup_status_bar(self):
+        self.status_bar = ctk.CTkFrame(self, height=30, corner_radius=0)
+        self.status_bar.grid(row=1, column=0, columnspan=2, sticky="ew")
+        
+        self.ocr_status_label = ctk.CTkLabel(self.status_bar, text="OCR: Checking...", font=ctk.CTkFont(size=11))
+        self.ocr_status_label.pack(side="left", padx=20)
+        
+        self.llm_status_label = ctk.CTkLabel(self.status_bar, text="LLM: Checking...", font=ctk.CTkFont(size=11))
+        self.llm_status_label.pack(side="left", padx=20)
+
+    def check_dependencies(self):
+        from src.core.ocr_engine import OcrEngine
+        from src.core.llm_engine import LlmInferenceEngine, ModelManager
+        
+        # Check OCR
+        try:
+            ocr = OcrEngine(show_log=False)
+            if ocr.is_ready():
+                self.ocr_status_label.configure(text="OCR: Ready ✅", text_color="green")
+            else:
+                self.ocr_status_label.configure(text="OCR: Library Missing ❌", text_color="red")
+        except Exception:
+            self.ocr_status_label.configure(text="OCR: Failed ❌", text_color="red")
+
+        # Check LLM Service
+        llm_ready = False
+        try:
+            llm = LlmInferenceEngine()
+            if llm.is_ready():
+                self.llm_status_label.configure(text="LLM: Service Ready ✅", text_color="green")
+                llm_ready = True
+            else:
+                self.llm_status_label.configure(text="LLM: Service Down/Missing ❌", text_color="red")
+        except Exception:
+            self.llm_status_label.configure(text="LLM: Service Failed ❌", text_color="red")
+
+        # Check Specific Models if service is ready
+        if llm_ready:
+            self._check_llm_models()
+
+    def _check_llm_models(self):
+        from src.core.llm_engine import ModelManager
+        mm = ModelManager()
+        
+        m1 = LLM_SETTINGS.get("step1_model")
+        m2 = LLM_SETTINGS.get("text_to_JSON_model")
+        
+        missing = []
+        if not mm.ensure_model_loaded(m1): missing.append(m1)
+        if not mm.ensure_model_loaded(m2): missing.append(m2)
+        
+        if missing:
+            self.llm_status_label.configure(
+                text=f"LLM: Models Missing ({', '.join(missing)}) ⚠️", 
+                text_color="orange"
+            )
+            if messagebox.askyesno("Models Missing", f"The following LLM models are not found locally:\n{', '.join(missing)}\n\nWould you like to download them now?"):
+                self._download_models(missing)
+        else:
+            self.llm_status_label.configure(text="LLM: Ready (Service + Models) ✅", text_color="green")
+
+    def _download_models(self, models):
+        from src.core.llm_engine import ModelManager
+        from src.utils.threading import run_in_background
+        
+        mm = ModelManager()
+        self.llm_status_label.configure(text="LLM: Downloading Models... ⏳", text_color="blue")
+        
+        def do_download():
+            success = True
+            for m in models:
+                if not mm.pull_model(m):
+                    success = False
+            
+            def finish():
+                if success:
+                    messagebox.showinfo("Success", "Models downloaded successfully.")
+                    self._check_llm_models()
+                else:
+                    messagebox.showerror("Error", "Failed to download some models. Check internet connection.")
+                    self.check_dependencies()
+            self.after(0, finish)
+            
+        run_in_background(do_download)
 
     def _create_path_row(self, label, config_key, row):
         ctk.CTkLabel(self.path_frame, text=label, font=ctk.CTkFont(weight="bold")).grid(row=row, column=0, padx=10, pady=10, sticky="w")

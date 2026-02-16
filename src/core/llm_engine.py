@@ -2,7 +2,6 @@ import os
 import time
 import logging
 import subprocess
-import ollama
 from src.utils import config
 from typing import Optional, Dict, Any
 from src.core.exceptions import ServiceUnavailableError, LlmError
@@ -16,8 +15,12 @@ class OllamaServiceManager:
     def ensure_running() -> bool:
         """Checks if Ollama is running, attempts to start it if not."""
         try:
+            import ollama
             ollama.list()
             return True
+        except ImportError:
+            logger.error("Ollama library not found. Please install it using 'pip install ollama'.")
+            return False
         except Exception:
             logger.info("Starting Ollama service...")
             try:
@@ -41,6 +44,7 @@ class OllamaServiceManager:
                 )
                 
                 # Wait for service to respond (up to 10 seconds)
+                import ollama
                 for _ in range(5):
                     time.sleep(2)
                     try:
@@ -62,13 +66,37 @@ class ModelManager:
             os.environ["OLLAMA_MODELS"] = models_path
 
     def ensure_model_loaded(self, model_name: str) -> bool:
-        """Ensures the specified model is available locally."""
+        """Ensures the specified model is available locally. Checks local list first."""
         try:
-            logger.info(f"Ensuring model '{model_name}' is ready...")
+            import ollama
+            
+            # Check if model already exists locally
+            local_models = ollama.list()
+            # ollama.list() returns an object where .models is a list of model objects
+            # Each model object has a 'model' attribute (name:tag)
+            model_exists = any(m.get('model') == model_name or m.get('name') == model_name for m in local_models.get('models', []))
+            
+            if model_exists:
+                return True
+                
+            logger.warning(f"Model '{model_name}' not found locally.")
+            return False
+        except ImportError:
+            logger.error("Ollama library not found.")
+            return False
+        except Exception as e:
+            logger.error(f"Error checking local models: {e}")
+            return False
+
+    def pull_model(self, model_name: str) -> bool:
+        """Explicitly pulls a model from the registry."""
+        try:
+            import ollama
+            logger.info(f"Pulling model '{model_name}'...")
             ollama.pull(model_name)
             return True
         except Exception as e:
-            logger.error(f"Model load failed for '{model_name}': {e}")
+            logger.error(f"Model pull failed for '{model_name}': {e}")
             return False
 
 class LlmInferenceEngine:
@@ -77,12 +105,21 @@ class LlmInferenceEngine:
     def __init__(self, model_manager: Optional[ModelManager] = None):
         self.model_manager = model_manager or ModelManager()
 
+    def is_ready(self) -> bool:
+        """Checks if the LLM engine (Ollama) is accessible."""
+        return OllamaServiceManager.ensure_running()
+
     def generate_response(self, model: str, prompt: str, format: Optional[str] = None, think: bool = False) -> Optional[Dict[str, Any]]:
         """
         Generates a response from Ollama.
         Raises ServiceUnavailableError if Ollama is down.
         Raises LlmError if inference fails.
         """
+        try:
+            import ollama
+        except ImportError:
+            raise LlmError("Ollama library not installed.")
+
         if not self.model_manager.ensure_model_loaded(model):
             raise LlmError(f"Failed to load/pull model: {model}")
             

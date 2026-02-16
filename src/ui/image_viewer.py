@@ -29,7 +29,13 @@ class ImageViewerWindow(ctk.CTkToplevel):
         project_root = Path(__file__).parents[2]
         self.output_dir = project_root / OCR_SETTINGS.get("default_output_dir", "output")
         self.handler = ResultDataHandler(str(self.output_dir / "results.csv"), str(self.output_dir))
-        self.coordinator = PipelineCoordinator(output_dir=str(self.output_dir))
+        
+        try:
+            self.coordinator = PipelineCoordinator(output_dir=str(self.output_dir))
+        except Exception as e:
+            logger.error(f"Failed to initialize Pipeline Coordinator: {e}")
+            messagebox.showerror("Initialization Error", f"Failed to initialize engines: {e}\nSome features may be disabled.")
+            self.coordinator = None
         
         self.model_overrides = {
             "step1_model": LLM_SETTINGS.get("step1_model"),
@@ -338,6 +344,10 @@ class ImageViewerWindow(ctk.CTkToplevel):
         self.focus_set()
 
     def reprocess_image(self):
+        if not self.coordinator:
+            messagebox.showerror("Error", "Pipeline Coordinator is not initialized. Check dependencies.")
+            return
+
         item = self.handler.get_current_item()
         if not item: return
         
@@ -390,6 +400,10 @@ class ImageViewerWindow(ctk.CTkToplevel):
         from src.core.ocr_engine import OcrEngine
         ocr = OcrEngine()
         
+        if not ocr.is_ready():
+            messagebox.showerror("Error", "OCR Engine is not ready. Please ensure PaddleOCR is installed.")
+            return
+
         def on_ocr_finished(raw):
             def _update():
                 if not raw: return

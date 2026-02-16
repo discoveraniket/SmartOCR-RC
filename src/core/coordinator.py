@@ -46,6 +46,10 @@ class PipelineCoordinator:
         effective_output_dir = output_dir or config.OCR_SETTINGS.get("default_output_dir", "output")
         self.output_manager = output_manager or OutputManager(effective_output_dir)
 
+    def is_ready(self) -> bool:
+        """Checks if both OCR and LLM engines are functional."""
+        return self.ocr_engine.is_ready() and self.llm_engine.is_ready()
+
     def process_image(self, image_path: str, step_callback: Optional[callable] = None) -> Optional[Dict[str, Any]]:
         """Main entry point to process a single image through the entire pipeline."""
         result = self.extract_data(image_path, step_callback=step_callback)

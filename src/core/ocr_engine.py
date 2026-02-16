@@ -1,7 +1,6 @@
 import logging
 from pathlib import Path
 from typing import List, Any, Dict, Optional, Union
-from paddleocr import PaddleOCR
 from src.utils import config
 from src.core.exceptions import OcrError
 
@@ -38,16 +37,25 @@ class OcrEngine:
     
     def __init__(self, **overrides):
         """Initialize PaddleOCR with settings from config, allowing overrides."""
+        self.client = None
         try:
+            from paddleocr import PaddleOCR
             settings = config.OCR_SETTINGS.copy()
             settings.update(overrides)
             self.client = PaddleOCR(**settings)
+        except ImportError:
+            logger.error("PaddleOCR library not found. Please install it using 'pip install paddleocr'.")
         except Exception as e:
             logger.error(f"Failed to initialize PaddleOCR engine: {e}")
-            raise OcrError(f"Failed to initialize PaddleOCR: {e}")
+
+    def is_ready(self) -> bool:
+        """Checks if the OCR engine is successfully initialized."""
+        return self.client is not None
 
     def run_inference(self, image: Union[str, Path, Any]) -> Any:
         """Executes the raw OCR process on an image file or numpy array."""
+        if not self.client:
+            raise OcrError("OCR Engine is not initialized. Check dependencies.")
         try:
             img_input = str(image) if isinstance(image, Path) else image
             return self.client.ocr(img_input, cls=True)
