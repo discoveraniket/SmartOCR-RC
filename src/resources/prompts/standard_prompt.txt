@@ -6,17 +6,17 @@ Extract specific data points from the provided OCR text and return them in a str
 
 ### EXTRACTION RULES
 1. **Ration Card ID**:
-   - Locate keywords "Ration Card ID :" or similar as OCR might misspell it.
+   - Locate keywords "Ration Card ID :" or similar as OCR might misspell it. This is you visual anchor for finding the ration card id. The id just follows this anchor
    - The ID consists of two parts:
      - Category (Alphabetic code): Any one of ["AAY", "PHH", "SPHH", "RKSY-I", "RKSY-II"]
      - ID (Numeric): exactly 10 digits.
    - *Correction Logic*: If the OCR has joined the category and ID (e.g., "SPHH1234567890"), split them. If the category is misspelled, map it to the nearest valid entry from the list above.
 
 2. **Card Holder Name**:
-   - Locate the keyword "Name of the Card Holder:" or similar OCR variations.
-   - Extract the name (FirstName LastName) following this label.
-   - Names are mostly 2 or 3 words (e.g. ANIKET SARKAR OR ARITRA KUMAR PATRA).
-   - Ignore dealer name or father name or husban name for this.
+   - Locate the keyword "Name of the Card Holder:" or similar OCR variations. This is you visual anchor for finding the 'card holder name'. The 'card holder name' just follows this anchor
+   - Extract the name (FirstName LastName).
+   - Names are mostly 2 or 3 words (e.g. ANIKET SARKAR OR ARITRA KUMAR PATRA). If you find the names are joind due two OCR variation, split them.
+   - Ignore dealer name or father/husban name.
    - If a 12 digit number is present with the name, ignore it as dealer name. [e.g. ALOKESH MISHRA(134000500036)] here "ALOKESH MISHRA" is dealer name, so it must be ignored.
 
 3. **Mobile Number**:

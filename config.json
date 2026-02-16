@@ -5,13 +5,13 @@
         "show_log": false,
         "ocr_version": "PP-OCRv4",
         "use_gpu": false,
-        "det_db_thresh": 0.3,
-        "det_db_box_thresh": 0.3,
-        "det_db_unclip_ratio": 2.0,
-        "det_limit_side_len": 1500,
-        "drop_score": 0.05,
+        "det_db_thresh": 0.1,
+        "det_db_box_thresh": 0.5,
+        "det_db_unclip_ratio": 1.6,
+        "det_limit_side_len": 3000,
+        "drop_score": 0.01,
         "enable_mkldnn": true,
-        "cpu_threads": 4,
+        "cpu_threads": 18,
         "rec_image_shape": "3, 48, 320",
         "default_input_dir": "D:/Codes/GitHub/RC-PaddleOCR - v2/data",
         "default_output_dir": "D:/Codes/GitHub/RC-PaddleOCR - v2/output",
@@ -20,7 +20,10 @@
         "dump_text_flow": true,
         "viewer_font_size": 32,
         "viewer_font_size_primary": 20,
-        "viewer_font_size_standard": 15
+        "viewer_font_size_standard": 15,
+        "det_db_score_mode": "slow",
+        "rec_batch_num": 20
+
     },
     "LLM_SETTINGS": {
         "step1_model": "qwen2.5:14b-instruct",
