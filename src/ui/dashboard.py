@@ -240,5 +240,7 @@ class Dashboard(ctk.CTk):
             self.vw = ImageViewerWindow(self)
 
 if __name__ == "__main__":
+    from src.utils.logging_utils import setup_logging
+    setup_logging()
     app = Dashboard()
     app.mainloop()

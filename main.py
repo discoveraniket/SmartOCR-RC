@@ -5,13 +5,9 @@ import os
 from src.core.coordinator import PipelineCoordinator
 from src.ui.dashboard import Dashboard
 
-def setup_logging():
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(levelname)s - %(message)s',
-        stream=sys.stdout,
-        force=True
-    )
+from src.utils.logging_utils import setup_logging
+
+logger = logging.getLogger(__name__)
 
 from pathlib import Path
 from src.core.batch_processor import BatchProcessor
@@ -22,18 +18,18 @@ def run_cli():
     output_dir = Path("output")
     
     if not data_dir.exists():
-        print(f"Directory {data_dir} does not exist.")
+        logger.error(f"Directory {data_dir} does not exist.")
         sys.exit(1)
 
-    print(f"Scanning {data_dir} for images...")
+    logger.info(f"Scanning {data_dir} for images...")
     processor = BatchProcessor(str(data_dir), str(output_dir))
     count = processor.discover_files()
     
     if count == 0:
-        print(f"No images found in {data_dir}")
+        logger.info(f"No images found in {data_dir}")
         sys.exit(0)
 
-    print(f"Found {count} images. Starting processing...")
+    logger.info(f"Found {count} images. Starting processing...")
     
     # Simple synchronous wrapper for CLI
     processed = 0
@@ -41,14 +37,14 @@ def run_cli():
         nonlocal processed
         if stats['processed'] + stats['errors'] > processed:
             processed = stats['processed'] + stats['errors']
-            print(f"[{processed}/{count}] Processed: {current_file}")
+            logger.info(f"[{processed}/{count}] Processed: {current_file}")
 
     def on_complete(stats):
-        print("\n--- Batch Processing Complete ---")
-        print(f"Total: {stats['total']}")
-        print(f"Success: {stats['processed']}")
-        print(f"Errors: {stats['errors']}")
-        print(f"Elapsed: {stats['elapsed']:.2f}s")
+        logger.info("\n--- Batch Processing Complete ---")
+        logger.info(f"Total: {stats['total']}")
+        logger.info(f"Success: {stats['processed']}")
+        logger.info(f"Errors: {stats['errors']}")
+        logger.info(f"Elapsed: {stats['elapsed']:.2f}s")
 
     # For CLI, we might want a synchronous version, but since BatchProcessor 
     # is designed for async with callbacks, we'll wait for it.

@@ -39,6 +39,7 @@ class BatchProcessor:
         ]
         
         self.total_files = len(files)
+        logger.info(f"Discovered {self.total_files} files for processing in {self.input_dir}")
         for f in files:
             self.queue.put(str(f))
         return self.total_files

@@ -122,10 +122,15 @@ class BatchWindow(ctk.CTkToplevel):
         self.log_textbox.grid(row=1, column=0, padx=10, pady=10, sticky="nsew")
         self.log_textbox.configure(state="disabled")
 
-        # Attach logging handler
+        # Attach logging handler to the root logger to capture all events
         self.log_handler = TextboxHandler(self.log_textbox)
         self.log_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s', '%H:%M:%S'))
-        logging.getLogger().addHandler(self.log_handler)
+        
+        root_logger = logging.getLogger()
+        root_logger.addHandler(self.log_handler)
+        # Ensure the level is at least INFO so we don't miss project logs
+        if root_logger.level > logging.INFO:
+            root_logger.setLevel(logging.INFO)
 
     def setup_controls_ui(self):
         self.controls_frame = ctk.CTkFrame(self, fg_color="transparent")

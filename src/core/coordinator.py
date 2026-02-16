@@ -52,11 +52,14 @@ class PipelineCoordinator:
 
     def process_image(self, image_path: str, step_callback: Optional[callable] = None) -> Optional[Dict[str, Any]]:
         """Main entry point to process a single image through the entire pipeline."""
+        self.logger.info(f"Processing image: {image_path}")
         result = self.extract_data(image_path, step_callback=step_callback)
         
         if not result:
+            self.logger.error(f"Failed to extract data from {image_path}")
             return None
 
+        self.logger.info(f"Finalizing results for {image_path}...")
         final_data = self.output_manager.finalize_result(
             image_path, 
             result.json_answer, 
@@ -65,7 +68,7 @@ class PipelineCoordinator:
         
         if final_data:
             self.logger.info(
-                f"Finished. Timings - Det: {result.metrics.ocr_det}s | "
+                f"Success! Timings - Det: {result.metrics.ocr_det}s | "
                 f"Rec: {result.metrics.ocr_rec}s | Step1: {result.metrics.step1_duration}s | "
                 f"JSON: {result.metrics.json_duration}s"
             )
