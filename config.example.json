@@ -1,0 +1,54 @@
+{
+    "OCR_SETTINGS": {
+        "lang": "en",
+        "use_angle_cls": true,
+        "show_log": false,
+        "ocr_version": "PP-OCRv4",
+        "use_gpu": false,
+        "det_db_thresh": 0.1,
+        "det_db_box_thresh": 0.5,
+        "det_db_unclip_ratio": 1.6,
+        "det_limit_side_len": 3000,
+        "drop_score": 0.01,
+        "enable_mkldnn": true,
+        "cpu_threads": 4,
+        "rec_image_shape": "3, 48, 320",
+        "default_input_dir": "data",
+        "default_output_dir": "output",
+        "crop_padding": 100,
+        "auto_crop": true,
+        "dump_text_flow": true,
+        "viewer_font_size": 32,
+        "viewer_font_size_primary": 20,
+        "viewer_font_size_standard": 15,
+        "det_db_score_mode": "slow",
+        "rec_batch_num": 20
+
+    },
+    "LLM_SETTINGS": {
+        "step1_model": "qwen2.5:14b-instruct",
+        "text_to_JSON_model": "llama3.2:3b",
+        "available_models": [
+            "deepseek-r1:8b",
+            "llama3.2:3b",
+            "qwen2.5:14b-instruct"
+        ],
+        "models_path": "",
+        "max_loaded_models": "3",
+        "keep_alive": "5m",
+        "standard_prompt": "USE_DEFAULT",
+        "text_to_json_prompt": "USE_DEFAULT"
+    },
+    "KEY_MAP": {
+        "viewer_next": "<Control-Right>",
+        "viewer_prev": "<Control-Left>",
+        "viewer_save_data": "<Control-S>",
+        "viewer_save_img": "<Control-I>",
+        "viewer_rotate": "<Control-R>",
+        "viewer_crop": "<Control-C>",
+        "viewer_reprocess": "<Control-A>",
+        "viewer_settings": "<Control-G>",
+        "viewer_view_log": "<Control-L>",
+        "viewer_reset": "<Control-0>"
+    }
+}

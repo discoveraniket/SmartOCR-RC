@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 class ImageViewerWindow(ctk.CTkToplevel):
     def __init__(self, parent):
         super().__init__(parent)
-        self.title("RC-PaddleOCR - Result Inspector")
+        self.title("SmartOCR-RC - Result Inspector")
         self.geometry("1500x950")
         
         # Configure grid for main window

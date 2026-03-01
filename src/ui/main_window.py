@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 class MainWindow(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("RC-PaddleOCR v2")
+        self.title("SmartOCR-RC v1.0")
         self.geometry("800x600")
         
         from src.utils import config
@@ -20,7 +20,7 @@ class MainWindow(tk.Tk):
 
     def setup_ui(self):
         # Header
-        header = ttk.Label(self, text="RC-PaddleOCR Processor", font=("Helvetica", 16, "bold"))
+        header = ttk.Label(self, text="SmartOCR-RC Processor", font=("Helvetica", 16, "bold"))
         header.pack(pady=20)
 
         # Controls

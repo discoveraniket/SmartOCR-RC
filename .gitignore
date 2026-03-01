@@ -7,3 +7,4 @@ output/
 .env
 .vscode/
 .idea/
+config.json

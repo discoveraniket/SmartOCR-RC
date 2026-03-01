@@ -2,6 +2,7 @@ import os
 import time
 import logging
 import subprocess
+import atexit
 from src.utils import config
 from typing import Optional, Dict, Any
 from src.core.exceptions import ServiceUnavailableError, LlmError
@@ -11,8 +12,11 @@ logger = logging.getLogger(__name__)
 class OllamaServiceManager:
     """Handles the lifecycle of the Ollama background service."""
     
-    @staticmethod
-    def ensure_running() -> bool:
+    _process: Optional[subprocess.Popen] = None
+    _started_by_us: bool = False
+
+    @classmethod
+    def ensure_running(cls) -> bool:
         """Checks if Ollama is running, attempts to start it if not."""
         try:
             import ollama
@@ -35,13 +39,17 @@ class OllamaServiceManager:
                 env["OLLAMA_MAX_LOADED_MODELS"] = max_models
                 env["OLLAMA_KEEP_ALIVE"] = keep_alive
 
-                subprocess.Popen(
+                cls._process = subprocess.Popen(
                     ["ollama", "serve"], 
                     stdout=subprocess.DEVNULL, 
                     stderr=subprocess.DEVNULL,
                     env=env,
                     creationflags=subprocess.CREATE_NEW_CONSOLE if os.name == 'nt' else 0
                 )
+                cls._started_by_us = True
+                
+                # Register shutdown hook
+                atexit.register(cls.shutdown)
                 
                 # Wait for service to respond (up to 10 seconds)
                 import ollama
@@ -56,6 +64,23 @@ class OllamaServiceManager:
             except Exception as e:
                 logger.error(f"Failed to launch Ollama: {e}")
                 return False
+                
+    @classmethod
+    def shutdown(cls):
+        """Terminates the Ollama process if it was started by this application."""
+        if cls._started_by_us and cls._process:
+            logger.info("Shutting down the managed Ollama service...")
+            try:
+                cls._process.terminate()
+                cls._process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                logger.warning("Ollama service did not terminate gracefully. Forcing kill.")
+                cls._process.kill()
+            except Exception as e:
+                logger.error(f"Error while shutting down Ollama: {e}")
+            finally:
+                cls._process = None
+                cls._started_by_us = False
 
 class ModelManager:
     """Handles model-specific operations like pulling/loading."""

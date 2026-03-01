@@ -40,7 +40,7 @@ class Dashboard(ctk.CTk):
     def __init__(self):
         super().__init__()
 
-        self.title("RC-PaddleOCR - Dashboard")
+        self.title("SmartOCR-RC - Dashboard")
         self.geometry("1100x850")
         
         ctk.set_appearance_mode("Dark")
@@ -61,7 +61,7 @@ class Dashboard(ctk.CTk):
         self.sidebar = ctk.CTkFrame(self, width=200, corner_radius=0)
         self.sidebar.grid(row=0, column=0, sticky="nsew")
         
-        ctk.CTkLabel(self.sidebar, text="RC-PaddleOCR", font=ctk.CTkFont(size=20, weight="bold")).pack(pady=20)
+        ctk.CTkLabel(self.sidebar, text="SmartOCR-RC", font=ctk.CTkFont(size=20, weight="bold")).pack(pady=20)
 
         ctk.CTkButton(self.sidebar, text="Batch Processing", command=self.open_batch_window).pack(padx=20, pady=10)
         ctk.CTkButton(self.sidebar, text="Image Viewer", command=self.open_viewer_window).pack(padx=20, pady=10)
