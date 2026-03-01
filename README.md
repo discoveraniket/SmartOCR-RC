@@ -10,11 +10,11 @@ The pipeline is orchestrated through a multi-engine architecture.
 
 ### Why This Architecture?
 
-* On limited local hardware, LLM-based OCR models that directly process images are extremely slow.
-* Loop-based control tests show that a single small local model becomes overwhelmed when forced to handle all tasks at once, causing reliability to drop to nearly unusable levels.
+* On limited local hardware, vision models that directly process images are extremely slow.
+* Loop-based control tests show that a single local vision/OCR model becomes overwhelmed when forced to handle all tasks at once, causing reliability to drop to nearly unusable levels.
 * Document images captured via mobile cameras often contain large amounts of white space and non-relevant regions, which degrade OCR accuracy if processed directly.
 
-To address these constraints, the pipeline deliberately separates OCR, reasoning, and formatting into independent stages, each optimized for speed, accuracy, and reliability.
+To address these constraints, the pipeline deliberately separates OCR, reasoning, and formatting into independent stages, each optimized for speed, accuracy, and reliability on limited local hardware.
 
 ### Pipeline Overview
 
@@ -34,16 +34,16 @@ A secondary, high-accuracy OCR pass extracts raw text while capturing bounding b
 
 Instead of relying on rigid regex patterns—which fail on highly variable Indian ration cards—the raw OCR text and spatial data are passed to a local LLM (e.g., `qwen2.5:14b-instruct`). A carefully tested prompt provides explicit instructions about what to extract from noisy OCR output.
 
-The LLM acts as a cleaning and reasoning agent, interpreting messy text to accurately identify names, family members, addresses, and card numbers. It produces a structured, JSON-like output.
+The LLM acts as a cleaning and reasoning agent, interpreting messy text with OCR variation error to accurately identify names, family members, addresses, and card numbers. It produces a structured, JSON-like output.
 
-A secondary, smaller LLM (e.g., `llama3.2:3b`) converts this cleaned output into strict, predictable JSON. Since the upstream model already produces an almost-JSON structure, this step runs extremely fast and achieves near-perfect accuracy (≈1 error in 5,000 loop-based tests).
+A secondary, smaller LLM (e.g., `llama3.2:3b`) converts this cleaned output into strict, predictable JSON. Since the upstream model already produces an almost-JSON structure, this step runs fast and achieves near-perfect accuracy (≈1 error in 10,000 loop-based tests).
 
 ### Why the Multi-Model Separation Works
 
 * The initial PaddleOCR pass is extremely fast—it only detects the position of the first and last characters to draw a bounding box around the relevant portion of the image.
 * By removing unrelated regions, the image does not need aggressive downscaling to fit the OCR model. PaddleOCR processes characters at higher effective resolution, improving raw text accuracy.
 * During the cleaning stage, the raw text size is small (≈200 characters), and the output is even smaller. The reasoning LLM operates on minimal context and only needs to follow a detailed instruction prompt, making a lower-mid size instruction-following model (`qwen2.5:14b-instruct`) sufficient and stable.
-* The final formatting step receives a small, clean JSON-like string and performs no complex reasoning. The small model (`llama3.2:3b`) therefore runs extremely fast and consistently.
+* The final formatting step receives a small, clean JSON-like string and performs no complex reasoning. The small model (`llama3.2:3b`) therefore runs fast and consistently.
 
 Overall, this multi-model pipeline delivers significantly better accuracy, speed, and reliability than a single large-model approach on local hardware.
 
@@ -51,11 +51,11 @@ Overall, this multi-model pipeline delivers significantly better accuracy, speed
 
 - **Built for Indian Document Complexities:** Designed to handle the unique formatting, varied typography, and physical wear-and-tear typical of Indian Ration Cards.
 - **100% Local & Private:** All processing, from image recognition to LLM inference, happens locally on your machine. No sensitive demographic data is sent to cloud APIs.
-- **Two-Stage AI Pipeline:** Uses a heavy "thinking" model for extraction and a lightweight model for JSON formatting, optimizing both accuracy and speed.
+- **Multi-Stage AI Pipeline:** Uses a heavy "thinking" model and lightweight models for OCR cleaning formatting, optimizing both accuracy and speed.
 - **Interactive Validation UI:** A robust `CustomTkinter` interface that allows human operators to:
     *   Inspect the original image alongside the extracted data.
     *   Use a zoomable canvas to read fine print.
-    *   Manually edit, correct, or force AI re-processing on specific fields.
+    *   Manually edit, correct, or force AI re-processing on specific image.
     *   Auto-crop images based on detected text bounds.
 - **Batch Processing:** Automatically scans input directories and processes hundreds of images asynchronously, saving results to a unified CSV.
 - **Graceful Degradation:** The GUI remains fully functional even if OCR or LLM dependencies are temporarily missing or downloading.
