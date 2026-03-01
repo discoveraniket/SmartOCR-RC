@@ -1,20 +1,51 @@
 # SmartOCR-RC (Ration Card Processor)
 
-SmartOCR-RC is a specialized Optical Character Recognition (OCR) and data extraction pipeline engineered specifically for processing **Indian Ration Cards**. It handles the complexities of low-quality scans, regional languages, and non-standardized document formats by combining the robustness of PaddleOCR with the intelligence of local Large Language Models (LLMs).
+SmartOCR-RC is a specialized Optical Character Recognition (OCR) and data extraction pipeline engineered specifically for processing **Indian Ration Cards**. It handles the complexities of low-quality scans, and non-standardized document formats by combining the robustness of PaddleOCR with the intelligence of local Large Language Models (LLMs).
 
 This tool bridges the gap between unstructured, noisy physical documents and clean, structured digital databases (JSON/CSV) securely and locally.
 
 ## How It Works
 
-The pipeline is orchestrated through a dual-engine architecture:
+The pipeline is orchestrated through a multi-engine architecture.
 
-1.  **Fast & Accurate OCR (PaddleOCR):**
-    *   Images are first passed through a fast-scan OCR phase to determine orientation and general layout.
-    *   A secondary, highly-accurate OCR pass extracts raw text, capturing bounding boxes to maintain spatial relationships (visual anchors).
-2.  **Intelligent Data Extraction (Local LLMs via Ollama):**
-    *   Instead of relying on rigid Regex patterns (which fail on highly variable Indian ration cards), the raw text and spatial data are passed to a local LLM (e.g., `qwen2.5:14b-instruct`).
-    *   The LLM acts as a "cleaning" and "reasoning" agent, interpreting the messy OCR output to accurately identify names, family members, addresses, and card numbers.
-    *   A secondary, smaller LLM (e.g., `llama3.2:3b`) formats this cleaned data into strict, predictable JSON.
+### Why This Architecture?
+
+* On limited local hardware, LLM-based OCR models that directly process images are extremely slow.
+* Loop-based control tests show that a single small local model becomes overwhelmed when forced to handle all tasks at once, causing reliability to drop to nearly unusable levels.
+* Document images captured via mobile cameras often contain large amounts of white space and non-relevant regions, which degrade OCR accuracy if processed directly.
+
+To address these constraints, the pipeline deliberately separates OCR, reasoning, and formatting into independent stages, each optimized for speed, accuracy, and reliability.
+
+### Pipeline Overview
+
+1. **Fast OCR-based image cleanup and text extraction.**
+2. **LLM-based reasoning and data cleaning on raw OCR output.**
+3. **Lightweight JSON normalization using a small local model.**
+
+This multi-stage design avoids overloading a single model while maintaining high accuracy and predictable output.
+
+### 1. Fast & Accurate OCR (PaddleOCR)
+
+Images are first passed through a fast-scan OCR phase to crop out white space and non-relevant regions. Mobile-captured document images often include large margins around the actual document content. This step isolates the region of interest, significantly improving performance and accuracy in later stages.
+
+A secondary, high-accuracy OCR pass extracts raw text while capturing bounding boxes to preserve spatial relationships (visual anchors).
+
+### 2. Intelligent Data Extraction (Local LLMs via Ollama)
+
+Instead of relying on rigid regex patterns—which fail on highly variable Indian ration cards—the raw OCR text and spatial data are passed to a local LLM (e.g., `qwen2.5:14b-instruct`). A carefully tested prompt provides explicit instructions about what to extract from noisy OCR output.
+
+The LLM acts as a cleaning and reasoning agent, interpreting messy text to accurately identify names, family members, addresses, and card numbers. It produces a structured, JSON-like output.
+
+A secondary, smaller LLM (e.g., `llama3.2:3b`) converts this cleaned output into strict, predictable JSON. Since the upstream model already produces an almost-JSON structure, this step runs extremely fast and achieves near-perfect accuracy (≈1 error in 5,000 loop-based tests).
+
+### Why the Multi-Model Separation Works
+
+* The initial PaddleOCR pass is extremely fast—it only detects the position of the first and last characters to draw a bounding box around the relevant portion of the image.
+* By removing unrelated regions, the image does not need aggressive downscaling to fit the OCR model. PaddleOCR processes characters at higher effective resolution, improving raw text accuracy.
+* During the cleaning stage, the raw text size is small (≈200 characters), and the output is even smaller. The reasoning LLM operates on minimal context and only needs to follow a detailed instruction prompt, making a lower-mid size instruction-following model (`qwen2.5:14b-instruct`) sufficient and stable.
+* The final formatting step receives a small, clean JSON-like string and performs no complex reasoning. The small model (`llama3.2:3b`) therefore runs extremely fast and consistently.
+
+Overall, this multi-model pipeline delivers significantly better accuracy, speed, and reliability than a single large-model approach on local hardware.
 
 ## Features
 
