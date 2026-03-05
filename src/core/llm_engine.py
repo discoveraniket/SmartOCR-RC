@@ -39,12 +39,14 @@ class OllamaServiceManager:
                 env["OLLAMA_MAX_LOADED_MODELS"] = max_models
                 env["OLLAMA_KEEP_ALIVE"] = keep_alive
 
+                # Use CREATE_NO_WINDOW (0x08000000) to hide the terminal on Windows
+                CREATE_NO_WINDOW = 0x08000000
                 cls._process = subprocess.Popen(
                     ["ollama", "serve"], 
                     stdout=subprocess.DEVNULL, 
                     stderr=subprocess.DEVNULL,
                     env=env,
-                    creationflags=subprocess.CREATE_NEW_CONSOLE if os.name == 'nt' else 0
+                    creationflags=CREATE_NO_WINDOW if os.name == 'nt' else 0
                 )
                 cls._started_by_us = True
                 

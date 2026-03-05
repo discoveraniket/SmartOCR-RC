@@ -121,55 +121,76 @@ class Dashboard(ctk.CTk):
         self.llm_status_label.pack(side="left", padx=20)
 
     def check_dependencies(self):
-        from src.core.ocr_engine import OcrEngine
-        from src.core.llm_engine import LlmInferenceEngine, ModelManager
+        from src.utils.threading import run_in_background
         
-        # Check OCR
-        try:
-            ocr = OcrEngine(show_log=False)
-            if ocr.is_ready():
-                self.ocr_status_label.configure(text="OCR: Ready ✅", text_color="green")
-            else:
-                self.ocr_status_label.configure(text="OCR: Library Missing ❌", text_color="red")
-        except Exception:
-            self.ocr_status_label.configure(text="OCR: Failed ❌", text_color="red")
+        self.ocr_status_label.configure(text="OCR: Checking...", text_color="white")
+        self.llm_status_label.configure(text="LLM: Checking...", text_color="white")
+        
+        def do_check():
+            from src.core.ocr_engine import OcrEngine
+            from src.core.llm_engine import LlmInferenceEngine
+            
+            # Check OCR
+            ocr_status = ("OCR: Failed ❌", "red")
+            try:
+                ocr = OcrEngine(show_log=False)
+                if ocr.is_ready():
+                    ocr_status = ("OCR: Ready ✅", "green")
+                else:
+                    ocr_status = ("OCR: Library Missing ❌", "red")
+            except Exception:
+                pass
+            
+            self.after(0, lambda: self.ocr_status_label.configure(text=ocr_status[0], text_color=ocr_status[1]))
 
-        # Check LLM Service
-        llm_ready = False
-        try:
-            llm = LlmInferenceEngine()
-            if llm.is_ready():
-                self.llm_status_label.configure(text="LLM: Service Ready ✅", text_color="green")
-                llm_ready = True
-            else:
-                self.llm_status_label.configure(text="LLM: Service Down/Missing ❌", text_color="red")
-        except Exception:
-            self.llm_status_label.configure(text="LLM: Service Failed ❌", text_color="red")
+            # Check LLM Service
+            llm_status = ("LLM: Service Failed ❌", "red")
+            llm_ready = False
+            try:
+                llm = LlmInferenceEngine()
+                if llm.is_ready():
+                    llm_status = ("LLM: Service Ready ✅", "green")
+                    llm_ready = True
+                else:
+                    llm_status = ("LLM: Service Down/Missing ❌", "red")
+            except Exception:
+                pass
 
-        # Check Specific Models if service is ready
-        if llm_ready:
-            self._check_llm_models()
+            self.after(0, lambda: self.llm_status_label.configure(text=llm_status[0], text_color=llm_status[1]))
+
+            # Check Specific Models if service is ready
+            if llm_ready:
+                self.after(0, self._check_llm_models)
+
+        run_in_background(do_check)
 
     def _check_llm_models(self):
         from src.core.llm_engine import ModelManager
-        mm = ModelManager()
+        from src.utils.threading import run_in_background
         
-        m1 = LLM_SETTINGS.get("step1_model")
-        m2 = LLM_SETTINGS.get("text_to_JSON_model")
-        
-        missing = []
-        if not mm.ensure_model_loaded(m1): missing.append(m1)
-        if not mm.ensure_model_loaded(m2): missing.append(m2)
-        
-        if missing:
-            self.llm_status_label.configure(
-                text=f"LLM: Models Missing ({', '.join(missing)}) ⚠️", 
-                text_color="orange"
-            )
-            if messagebox.askyesno("Models Missing", f"The following LLM models are not found locally:\n{', '.join(missing)}\n\nWould you like to download them now?"):
-                self._download_models(missing)
-        else:
-            self.llm_status_label.configure(text="LLM: Ready (Service + Models) ✅", text_color="green")
+        def do_model_check():
+            mm = ModelManager()
+            m1 = LLM_SETTINGS.get("step1_model")
+            m2 = LLM_SETTINGS.get("text_to_JSON_model")
+            
+            missing = []
+            if not mm.ensure_model_loaded(m1): missing.append(m1)
+            if not mm.ensure_model_loaded(m2): missing.append(m2)
+            
+            def update_ui():
+                if missing:
+                    self.llm_status_label.configure(
+                        text=f"LLM: Models Missing ({', '.join(missing)}) ⚠️", 
+                        text_color="orange"
+                    )
+                    if messagebox.askyesno("Models Missing", f"The following LLM models are not found locally:\n{', '.join(missing)}\n\nWould you like to download them now?"):
+                        self._download_models(missing)
+                else:
+                    self.llm_status_label.configure(text="LLM: Ready (Service + Models) ✅", text_color="green")
+            
+            self.after(0, update_ui)
+
+        run_in_background(do_model_check)
 
     def _download_models(self, models):
         from src.core.llm_engine import ModelManager
