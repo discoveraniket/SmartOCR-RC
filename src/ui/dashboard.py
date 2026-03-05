@@ -5,6 +5,7 @@ from tkinter import messagebox
 from src.utils.config import OCR_SETTINGS, LLM_SETTINGS, KEY_MAP, save_config, FACTORY_DEFAULTS
 from src.ui.batch_window import BatchWindow
 from src.ui.image_viewer import ImageViewerWindow
+from src.ui.rc_processor_window import RCProcessorWindow
 from src.ui.components.settings_pane import SettingsPane
 from src.ui.ui_utils import browse_directory
 
@@ -65,6 +66,7 @@ class Dashboard(ctk.CTk):
 
         ctk.CTkButton(self.sidebar, text="Batch Processing", command=self.open_batch_window).pack(padx=20, pady=10)
         ctk.CTkButton(self.sidebar, text="Image Viewer", command=self.open_viewer_window).pack(padx=20, pady=10)
+        ctk.CTkButton(self.sidebar, text="RC Database Tools", command=self.open_rc_processor_window).pack(padx=20, pady=10)
 
         # Bottom UI controls
         ctk.CTkLabel(self.sidebar, text="Appearance:").pack(side="bottom", padx=20, pady=(0, 5))
@@ -238,6 +240,12 @@ class Dashboard(ctk.CTk):
             self.vw.focus()
         else:
             self.vw = ImageViewerWindow(self)
+
+    def open_rc_processor_window(self):
+        if hasattr(self, "rcw") and self.rcw.winfo_exists():
+            self.rcw.focus()
+        else:
+            self.rcw = RCProcessorWindow(self)
 
 if __name__ == "__main__":
     from src.utils.logging_utils import setup_logging

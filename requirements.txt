@@ -4,3 +4,9 @@ ollama
 opencv-python
 pillow
 customtkinter
+requests
+beautifulsoup4
+pandas
+openpyxl
+rapidfuzz
+jellyfish
