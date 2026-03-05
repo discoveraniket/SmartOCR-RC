@@ -66,3 +66,24 @@ def test_extract_data_llm_failure(mock_ocr, mock_llm, mock_output):
     
     result = coordinator.extract_data("dummy.jpg")
     assert result is None
+
+def test_process_image_flow(mock_ocr, mock_llm, mock_output):
+    """Test the higher-level process_image call including output management."""
+    mock_ocr.run_inference.return_value = [[[[[0,0], [10,0], [10,10], [0,10]], ["TEXT", 0.99]]]]
+    mock_llm.generate_response.return_value = {"answer": '{"id": "123"}', "duration": 0.1}
+    
+    # Mock output manager to return some "finalized" data
+    mock_output.finalize_result.return_value = {"processed_image_name": "final.jpg", "id": "123"}
+    
+    coordinator = PipelineCoordinator(
+        ocr_engine=mock_ocr, 
+        det_engine=mock_ocr, 
+        llm_engine=mock_llm, 
+        output_manager=mock_output
+    )
+    
+    final_res = coordinator.process_image("dummy.jpg")
+    
+    assert final_res is not None
+    assert final_res['data']['id'] == "123"
+    mock_output.finalize_result.assert_called_once()

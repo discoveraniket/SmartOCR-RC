@@ -1,0 +1,6 @@
+# About the UI reorganization.
+1. I want the app to be single window first app.
+2. the side panel of main window should be colupsible.
+3. on start up instead of the configuration settings page, I want the "search Ration card" page to load. the configuration settings page now be a button in side panel.
+4. separate the "search ration card" from the other database UI (auto process, download ...etc).
+5. the database operations should be a separate button on the side panel. clicking it shuld open the tabs UI on main ui area.
