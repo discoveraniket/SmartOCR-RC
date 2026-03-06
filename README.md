@@ -52,7 +52,7 @@ Overall, this multi-model pipeline delivers significantly better accuracy, speed
 - **Built for Indian Document Complexities:** Designed to handle the unique formatting, varied typography, and physical wear-and-tear typical of Indian Ration Cards.
 - **100% Local & Private:** All processing, from image recognition to LLM inference, happens locally on your machine. No sensitive demographic data is sent to cloud APIs.
 - **Multi-Stage AI Pipeline:** Uses a heavy "thinking" model and lightweight models for OCR cleaning formatting, optimizing both accuracy and speed.
-- **Interactive Validation UI:** A robust `CustomTkinter` interface that allows human operators to:
+- **Interactive Validation UI:** A modern **PySide6 (Fluent UI)** interface that allows human operators to:
     *   Inspect the original image alongside the extracted data.
     *   Use a zoomable canvas to read fine print.
     *   Manually edit, correct, or force AI re-processing on specific image.
@@ -127,10 +127,11 @@ Results are saved to the `output/` directory, which includes:
   - `ocr_engine.py`: Wraps PaddleOCR for two-stage scanning.
   - `llm_engine.py`: Manages Ollama subprocesses, model lifecycle, and prompt execution.
   - `coordinator.py`: The central nervous system linking OCR outputs to LLM inputs.
-- `src/ui/`: The CustomTkinter graphical interface.
-  - `dashboard.py`: Central hub and settings manager.
-  - `image_viewer.py`: The human-in-the-loop validation tool.
+- `src/ui/qt_views/`: The PySide6 (Fluent UI) graphical interface.
+  - `main_window.py`: Central hub and navigation manager.
+  - `image_viewer_view.py`: The human-in-the-loop validation tool.
 - `src/utils/`: Handlers for logging, image manipulation (cropping/rotating), and configuration state.
+- `legacy_ctk/`: Contains the original CustomTkinter implementation for reference.
 
 ## License
 
