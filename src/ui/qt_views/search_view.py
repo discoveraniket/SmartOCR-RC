@@ -98,7 +98,7 @@ class SearchView(QFrame):
         edit_layout.setContentsMargins(20, 20, 20, 20)
         edit_layout.setSpacing(15)
         
-        edit_layout.addWidget(StrongBodyLabel("Additional Info (Editable)"))
+        edit_layout.addWidget(StrongBodyLabel("Additional Info (Editable)", self))
         
         caste_layout = QVBoxLayout()
         caste_layout.addWidget(BodyLabel("Caste:", self))
@@ -126,7 +126,7 @@ class SearchView(QFrame):
         export_layout.setContentsMargins(20, 20, 20, 20)
         export_layout.setSpacing(10)
         
-        export_layout.addWidget(StrongBodyLabel("Export Settings"))
+        export_layout.addWidget(StrongBodyLabel("Export Settings", self))
         
         path_layout = QHBoxLayout()
         self.output_path_input = LineEdit(self)
