@@ -1,6 +1,7 @@
 import os
 import threading
 import winsound
+import time
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QLabel
 from qfluentwidgets import (SubtitleLabel, setFont, SearchLineEdit, 
@@ -181,6 +182,13 @@ class SearchView(QFrame):
             self.current_match = {}
             self.result_card.clear()
             self.match_status.setText("No matches found")
+            
+            def double_low_beep():
+                winsound.Beep(400, 150)
+                time.sleep(0.1)
+                winsound.Beep(400, 150)
+            
+            threading.Thread(target=double_low_beep, daemon=True).start()
 
     def save_data(self):
         if not self.current_match:
