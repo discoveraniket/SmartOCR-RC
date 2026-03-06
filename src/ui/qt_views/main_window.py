@@ -8,6 +8,8 @@ from qfluentwidgets import (NavigationItemPosition, FluentWindow,
 
 from src.ui.qt_views.search_view import SearchView
 from src.ui.qt_views.settings_view import SettingsView
+from src.ui.qt_views.database_operations_view import DatabaseOperationsView
+from src.ui.qt_views.auto_process_view import AutoProcessView
 
 class PlaceholderFrame(QFrame):
     def __init__(self, text: str, parent=None):
@@ -28,7 +30,8 @@ class MainWindow(FluentWindow):
 
         # Initialize Views
         self.searchView = SearchView(self)
-        self.dbView = PlaceholderFrame("RC Database Tools", self)
+        self.autoProcessView = AutoProcessView(self)
+        self.dbView = DatabaseOperationsView(self)
         self.batchView = PlaceholderFrame("Batch Processing", self)
         self.viewerView = PlaceholderFrame("Image Viewer", self)
         self.settingsView = SettingsView(self)
@@ -38,6 +41,7 @@ class MainWindow(FluentWindow):
     def _init_navigation(self):
         # Add items to side navigation
         self.addSubInterface(self.searchView, FIF.SEARCH, 'Search')
+        self.addSubInterface(self.autoProcessView, FIF.SYNC, 'Auto Process')
         self.addSubInterface(self.dbView, FIF.FOLDER, 'Database')
         self.addSubInterface(self.batchView, FIF.APPLICATION, 'Batch')
         self.addSubInterface(self.viewerView, FIF.PHOTO, 'Viewer')

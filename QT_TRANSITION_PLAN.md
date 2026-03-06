@@ -41,15 +41,17 @@ Migrate the entire application interface from `customtkinter` to `PySide6` using
 
 ## 📋 Remaining Tasks (Phased)
 
-### Phase 2: Data Hub
-- [ ] **Database Operations Hub:**
+### Phase 2: Pipeline & Data Hub
+- [x] **Auto Process (One-Click Pipeline):**
+    - Dedicated sidebar view for the end-to-end processing pipeline.
+    - Integrated status and summary dashboard.
+- [x] **Database Operations Hub:**
     - Create a unified view using `Pivot` (Tabs) for:
-        - Auto Process (One-Click Pipeline)
         - Download (Beneficiary Downloader)
         - HTML to CSV (Converter)
         - Enrichment (Caste/Dealer mapping)
         - CSV to Database (SQLite conversion)
-- [ ] **Integrity Check:** Run `run_tests.py`.
+- [x] **Integrity Check:** Run `run_tests.py`.
 - [ ] **Validation:** Wait for User check.
 
 ### Phase 3: Processing & Visualization
