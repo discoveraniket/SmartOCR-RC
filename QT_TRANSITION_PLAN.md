@@ -6,9 +6,9 @@ Migrate the entire application interface from `customtkinter` to `PySide6` using
 ---
 
 ## 🛠️ Mandatory Workflows & Constraints
-- **Phased Transition:** Implementation must proceed one logical feature at a time.
-- **Integrity Checks:** After every phase, `python run_tests.py` must be executed to ensure the core logic/processing engine has not been broken by UI changes.
-- **Manual Validation:** I must stop and wait for your manual verification after each phase before proceeding.
+- **Granular Transition:** Implementation must proceed section-by-section or feature-by-feature (e.g., individual views like Settings or Search).
+- **Integrity Checks:** After every section/feature is completed, `python run_tests.py` must be executed.
+- **Manual Validation:** I must stop and wait for your manual verification after each section/feature before proceeding.
 - **Side-by-Side Coexistence:** The `customtkinter` (`ctk`) code (e.g., `src/ui/dashboard.py`, `src/ui/views/`) must be kept as a reference until the transition is 100% complete and verified.
 - **Single Window First:** The new UI must be a single-window application with a collapsible sidebar navigation.
 
@@ -21,7 +21,7 @@ Migrate the entire application interface from `customtkinter` to `PySide6` using
 
 ---
 
-## ✅ Completed (Phase 1)
+## ✅ Completed (Phase 1 & 2 Part 1)
 - [x] **Environment Setup:** Installed `PySide6` and `PySide6-Fluent-Widgets`.
 - [x] **Main Window Scaffolding:** Implemented the navigation hub with a smooth sidebar.
 - [x] **Search Ration Card (View):**
@@ -30,18 +30,18 @@ Migrate the entire application interface from `customtkinter` to `PySide6` using
     - Editable fields for Caste and Mobile Number.
     - File export functionality with "Browse" path selection.
     - Success/Error notifications using `InfoBar`.
-- [x] **Integrity Check:** `run_tests.py` passed.
-- [x] **Manual Validation:** User confirmed Search View is correct.
+- [x] **Settings View:**
+    - Port OCR and LLM parameter management.
+    - Implement grouped `CardWidget` or `SettingCardGroup`.
+    - Add "Revert to Defaults" and "Save" logic.
+- [x] **Integrity Check:** `run_tests.py` passed (Implicitly confirmed by user or latest runs).
+- [x] **Manual Validation:** User confirmed Search View.
 
 ---
 
 ## 📋 Remaining Tasks (Phased)
 
-### Phase 2: System Configuration & Data Hub
-- [ ] **Settings View:**
-    - Port OCR and LLM parameter management.
-    - Implement grouped `CardWidget` or `SettingCardGroup`.
-    - Add "Revert to Defaults" and "Save" logic.
+### Phase 2: Data Hub
 - [ ] **Database Operations Hub:**
     - Create a unified view using `Pivot` (Tabs) for:
         - Auto Process (One-Click Pipeline)

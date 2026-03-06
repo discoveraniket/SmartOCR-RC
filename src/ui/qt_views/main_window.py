@@ -7,6 +7,7 @@ from qfluentwidgets import (NavigationItemPosition, FluentWindow,
                             SubtitleLabel, setFont, FluentIcon as FIF)
 
 from src.ui.qt_views.search_view import SearchView
+from src.ui.qt_views.settings_view import SettingsView
 
 class PlaceholderFrame(QFrame):
     def __init__(self, text: str, parent=None):
@@ -30,7 +31,7 @@ class MainWindow(FluentWindow):
         self.dbView = PlaceholderFrame("RC Database Tools", self)
         self.batchView = PlaceholderFrame("Batch Processing", self)
         self.viewerView = PlaceholderFrame("Image Viewer", self)
-        self.settingsView = PlaceholderFrame("Settings", self)
+        self.settingsView = SettingsView(self)
 
         self._init_navigation()
 
