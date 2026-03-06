@@ -225,30 +225,32 @@ class ImageViewerView(QFrame):
         self.data_card_layout.addWidget(self.scroll_area)
         self.side_panel_layout.addWidget(self.data_card, 1)
         
-        # Actions
-        self.save_data_btn = PrimaryPushButton("Save Changes", self.side_panel)
-        self.save_data_btn.setFixedHeight(40)
-        self.save_data_btn.clicked.connect(self.save_edits)
-        setFont(self.save_data_btn, 14)
-        self.side_panel_layout.addWidget(self.save_data_btn)
+        # --- RIGHT SIDE ACTIONS REORGANIZATION ---
         
-        self.secondary_actions_layout = QHBoxLayout()
-        self.secondary_actions_layout.setSpacing(8)
+        # 1. Utility Row (Metrics, Font, Log, Settings, Delete) - Sits above the main gap
+        self.utility_row_layout = QHBoxLayout()
+        self.utility_row_layout.setContentsMargins(0, 5, 0, 0)
+        self.utility_row_layout.setSpacing(8)
         
-        self.reprocess_btn = PushButton(FIF.SYNC, "AI Re-process", self.side_panel)
-        self.reprocess_btn.setFixedHeight(32)
-        self.reprocess_btn.clicked.connect(self.reprocess_image)
-        setFont(self.reprocess_btn, 13)
+        self.metrics_label = CaptionLabel("", self.side_panel)
+        self.metrics_label.setStyleSheet("color: #888888;")
+        setFont(self.metrics_label, 10)
+        self.utility_row_layout.addWidget(self.metrics_label, 1)
         
-        self.log_btn = PushButton(FIF.DOCUMENT, "Log", self.side_panel)
-        self.log_btn.setFixedWidth(70)
-        self.log_btn.setFixedHeight(32)
+        # Utility buttons (Compact 32x32 to distinguish from main bar)
+        self.font_down_btn = create_icon_btn(FIF.REMOVE, "Decrease Font Size", self.side_panel, size=32, icon_size=14)
+        self.font_down_btn.clicked.connect(lambda: self.change_font_size(-2))
+        
+        self.font_up_btn = create_icon_btn(FIF.ADD, "Increase Font Size", self.side_panel, size=32, icon_size=14)
+        self.font_up_btn.clicked.connect(lambda: self.change_font_size(2))
+        
+        self.log_btn = create_icon_btn(FIF.DOCUMENT, "View Log", self.side_panel, size=32, icon_size=14)
         self.log_btn.clicked.connect(self.view_log)
-        setFont(self.log_btn, 13)
+        
+        self.settings_btn = create_icon_btn(FIF.SETTING, "Session Settings", self.side_panel, size=32, icon_size=14)
+        self.settings_btn.clicked.connect(self.open_settings)
         
         self.delete_btn = create_icon_btn(FIF.DELETE, "Delete Item", self.side_panel, size=32, icon_size=14)
-        self.delete_btn.setFixedHeight(32)
-        # Subtle red for delete
         self.delete_btn.setStyleSheet("""
             ToolButton {
                 background-color: rgba(255, 68, 68, 0.1);
@@ -261,38 +263,34 @@ class ImageViewerView(QFrame):
         """)
         self.delete_btn.clicked.connect(self.delete_current_item)
         
-        self.secondary_actions_layout.addWidget(self.reprocess_btn, 1)
-        self.secondary_actions_layout.addWidget(self.log_btn)
-        self.secondary_actions_layout.addWidget(self.delete_btn)
-        self.side_panel_layout.addLayout(self.secondary_actions_layout)
-
-        # Footer row with Metrics and Controls
-        self.footer_layout = QHBoxLayout()
-        self.footer_layout.setContentsMargins(0, 0, 0, 0)
+        self.utility_row_layout.addWidget(self.font_down_btn)
+        self.utility_row_layout.addWidget(self.font_up_btn)
+        self.utility_row_layout.addWidget(self.log_btn)
+        self.utility_row_layout.addWidget(self.settings_btn)
+        self.utility_row_layout.addWidget(self.delete_btn)
         
-        self.metrics_label = CaptionLabel("", self.side_panel)
-        self.metrics_label.setStyleSheet("color: #888888;")
-        setFont(self.metrics_label, 11)
-        self.footer_layout.addWidget(self.metrics_label, 1)
-
-        self.font_ctrl_layout = QHBoxLayout()
-        self.font_ctrl_layout.setSpacing(2)
+        self.side_panel_layout.addLayout(self.utility_row_layout)
         
-        self.font_up_btn = create_icon_btn(FIF.ADD, "Increase Font Size", self.side_panel, size=28, icon_size=14)
-        self.font_up_btn.clicked.connect(lambda: self.change_font_size(2))
+        # 2. Main Action Bar (Aligned with Left bottom_bar)
+        self.side_bottom_bar = QFrame()
+        self.side_bottom_layout = QHBoxLayout(self.side_bottom_bar)
+        self.side_bottom_layout.setContentsMargins(0, 15, 0, 0) # Mirror left bar's 15px top margin
+        self.side_bottom_layout.setSpacing(8)
         
-        self.font_down_btn = create_icon_btn(FIF.REMOVE, "Decrease Font Size", self.side_panel, size=28, icon_size=14)
-        self.font_down_btn.clicked.connect(lambda: self.change_font_size(-2))
+        self.save_data_btn = PrimaryPushButton("Save Changes", self.side_bottom_bar)
+        self.save_data_btn.setFixedHeight(36) # Mirror left bar's button height
+        self.save_data_btn.clicked.connect(self.save_edits)
+        setFont(self.save_data_btn, 13)
         
-        self.font_ctrl_layout.addWidget(self.font_down_btn)
-        self.font_ctrl_layout.addWidget(self.font_up_btn)
-        self.footer_layout.addLayout(self.font_ctrl_layout)
+        self.reprocess_btn = PushButton(FIF.SYNC, "AI Re-process", self.side_bottom_bar)
+        self.reprocess_btn.setFixedHeight(36)
+        self.reprocess_btn.clicked.connect(self.reprocess_image)
+        setFont(self.reprocess_btn, 13)
         
-        self.settings_btn = create_icon_btn(FIF.SETTING, "Session Settings", self.side_panel, size=28, icon_size=14)
-        self.settings_btn.clicked.connect(self.open_settings)
-        self.footer_layout.addWidget(self.settings_btn)
-
-        self.side_panel_layout.addLayout(self.footer_layout)
+        self.side_bottom_layout.addWidget(self.save_data_btn, 1)
+        self.side_bottom_layout.addWidget(self.reprocess_btn, 1)
+        
+        self.side_panel_layout.addWidget(self.side_bottom_bar)
 
         # Add to splitter
         self.splitter.addWidget(self.viewport_container)
