@@ -12,6 +12,7 @@ from src.ui.qt_views.database_operations_view import DatabaseOperationsView
 from src.ui.qt_views.auto_process_view import AutoProcessView
 from src.ui.qt_views.batch_view import BatchView
 from src.ui.qt_views.image_viewer_view import ImageViewerView
+from src.ui.qt_views.about_view import AboutView
 from src.core.llm_engine import OllamaServiceManager
 
 class PlaceholderFrame(QFrame):
@@ -38,6 +39,7 @@ class MainWindow(FluentWindow):
         self.batchView = BatchView(self)
         self.viewerView = ImageViewerView(self)
         self.settingsView = SettingsView(self)
+        self.aboutView = AboutView(self)
 
         self._init_navigation()
 
@@ -52,6 +54,7 @@ class MainWindow(FluentWindow):
         self.navigationInterface.addSeparator()
         
         self.addSubInterface(self.settingsView, FIF.SETTING, 'Settings', NavigationItemPosition.BOTTOM)
+        self.addSubInterface(self.aboutView, FIF.INFO, 'About', NavigationItemPosition.BOTTOM)
 
         # Navigation behavior
         self.navigationInterface.setExpandWidth(220)
