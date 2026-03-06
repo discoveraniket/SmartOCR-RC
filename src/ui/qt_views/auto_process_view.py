@@ -119,7 +119,7 @@ class AutoProcessView(QFrame):
         # Start Button
         self.start_btn = PrimaryPushButton("START AUTO PROCESS", self)
         self.start_btn.setFixedHeight(50)
-        setFont(self.start_btn, 18, weight=QFont.Weight.Bold)
+        setFont(self.start_btn, 18, weight=QFont.Bold)
         self.start_btn.clicked.connect(self._start_pipeline)
         self.scroll_layout.addWidget(self.start_btn)
 

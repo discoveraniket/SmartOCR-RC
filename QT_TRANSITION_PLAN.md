@@ -52,15 +52,15 @@ Migrate the entire application interface from `customtkinter` to `PySide6` using
         - Enrichment (Caste/Dealer mapping)
         - CSV to Database (SQLite conversion)
 - [x] **Integrity Check:** Run `run_tests.py`.
-- [ ] **Validation:** Wait for User check.
+- [x] **Validation:** Wait for User check.
 
 ### Phase 3: Processing & Visualization
-- [ ] **Batch Processing View:**
+- [x] **Batch Processing View:**
     - Port the `BatchProcessor` UI (Progress bars, file discovery list).
     - Handle real-time logs in a `TextEdit`.
-- [ ] **Image Viewer View:**
+- [ ] **Image Viewer View (INCOMPLETE - NEEDS REWORK):**
     - Port the interactive viewer (Zoom, pan, OCR bounding box overlays).
-- [ ] **Integrity Check:** Run `run_tests.py`.
+- [x] **Integrity Check:** Run `run_tests.py`.
 - [ ] **Validation:** Wait for User check.
 
 ---

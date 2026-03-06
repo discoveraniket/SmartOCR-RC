@@ -10,6 +10,9 @@ from src.ui.qt_views.search_view import SearchView
 from src.ui.qt_views.settings_view import SettingsView
 from src.ui.qt_views.database_operations_view import DatabaseOperationsView
 from src.ui.qt_views.auto_process_view import AutoProcessView
+from src.ui.qt_views.batch_view import BatchView
+from src.ui.qt_views.image_viewer_view import ImageViewerView
+from src.core.llm_engine import OllamaServiceManager
 
 class PlaceholderFrame(QFrame):
     def __init__(self, text: str, parent=None):
@@ -32,8 +35,8 @@ class MainWindow(FluentWindow):
         self.searchView = SearchView(self)
         self.autoProcessView = AutoProcessView(self)
         self.dbView = DatabaseOperationsView(self)
-        self.batchView = PlaceholderFrame("Batch Processing", self)
-        self.viewerView = PlaceholderFrame("Image Viewer", self)
+        self.batchView = BatchView(self)
+        self.viewerView = ImageViewerView(self)
         self.settingsView = SettingsView(self)
 
         self._init_navigation()
@@ -55,3 +58,9 @@ class MainWindow(FluentWindow):
         
         # Set default
         self.switchTo(self.searchView)
+
+    def closeEvent(self, event):
+        """Handle application closure and stop managed services."""
+        self.hide()
+        OllamaServiceManager.shutdown()
+        event.accept()
