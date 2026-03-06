@@ -6,51 +6,33 @@ from src.utils.config import OCR_SETTINGS, LLM_SETTINGS, KEY_MAP, save_config, F
 from src.ui.batch_window import BatchWindow
 from src.ui.image_viewer import ImageViewerWindow
 from src.ui.rc_processor_window import RCProcessorWindow
-from src.ui.components.settings_pane import SettingsPane
-from src.ui.ui_utils import browse_directory
+from src.ui.views.search_view import SearchView
+from src.ui.views.settings_view import SettingsView
 
 logger = logging.getLogger(__name__)
-
-HELP_TEXT = {
-    "lang": "Language code for OCR (e.g., 'en', 'ch').",
-    "use_angle_cls": "Enable text angle classification for rotated text.",
-    "show_log": "Display PaddleOCR internal logs in console.",
-    "ocr_version": "Version of the OCR model (e.g., PP-OCRv4).",
-    "use_gpu": "Use NVIDIA GPU (requires CUDA) for acceleration.",
-    "det_db_thresh": "Threshold for text detection binarization.",
-    "det_db_box_thresh": "Threshold for filtering detected text boxes.",
-    "det_db_unclip_ratio": "Expands detection boxes to prevent clipping.",
-    "det_limit_side_len": "Maximum side length for detection scaling.",
-    "drop_score": "Filter out text with confidence lower than this.",
-    "enable_mkldnn": "Use Intel MKLDNN for faster CPU processing.",
-    "cpu_threads": "Number of CPU threads to use.",
-    "rec_image_shape": "Input shape for the recognition model.",
-    "crop_padding": "Padding added around text during auto-crop.",
-    "auto_crop": "Automatically crop image to text areas.",
-    "dump_text_flow": "Save raw/cleaned text to logs for auditing.",
-    "standard_prompt": "Main cleaning prompt. Use 'USE_DEFAULT' for built-in.",
-    "text_to_json_prompt": "JSON conversion prompt. Use 'USE_DEFAULT' for built-in.",
-    "step1_model": "Ollama model for cleaning.",
-    "text_to_JSON_model": "Ollama model for JSON extraction.",
-    "models_path": "Local path for LLM models.",
-    "max_loaded_models": "Max models in memory.",
-    "keep_alive": "How long models stay loaded."
-}
 
 class Dashboard(ctk.CTk):
     def __init__(self):
         super().__init__()
 
-        self.title("SmartOCR-RC - Dashboard")
-        self.geometry("1100x850")
+        self.title("SmartOCR-RC")
+        self.geometry("1200x850")
         
         ctk.set_appearance_mode("Dark")
         ctk.set_default_color_theme("blue")
+
+        # Sidebar state
+        self.sidebar_is_expanded = True
+        self.sidebar_width_expanded = 220
+        self.sidebar_width_collapsed = 60
 
         self._setup_layout()
         self._setup_sidebar()
         self._setup_main_content()
         self._setup_status_bar()
+        
+        # Select default frame
+        self.select_frame_by_name("search")
         
         self.after(500, self.check_dependencies)
 
@@ -59,56 +41,74 @@ class Dashboard(ctk.CTk):
         self.grid_rowconfigure(0, weight=1)
 
     def _setup_sidebar(self):
-        self.sidebar = ctk.CTkFrame(self, width=200, corner_radius=0)
+        self.sidebar = ctk.CTkFrame(self, width=self.sidebar_width_expanded, corner_radius=0)
         self.sidebar.grid(row=0, column=0, sticky="nsew")
-        
-        ctk.CTkLabel(self.sidebar, text="SmartOCR-RC", font=ctk.CTkFont(size=20, weight="bold")).pack(pady=20)
+        self.sidebar.grid_rowconfigure(7, weight=1) # Spacer
+        self.sidebar.grid_propagate(False) # Keep width fixed
 
-        ctk.CTkButton(self.sidebar, text="Batch Processing", command=self.open_batch_window).pack(padx=20, pady=10)
-        ctk.CTkButton(self.sidebar, text="Image Viewer", command=self.open_viewer_window).pack(padx=20, pady=10)
-        ctk.CTkButton(self.sidebar, text="RC Database Tools", command=self.open_rc_processor_window).pack(padx=20, pady=10)
+        # Toggle Button (Hamburger)
+        self.btn_toggle = ctk.CTkButton(self.sidebar, text="≡", width=40, height=40, 
+                                       corner_radius=8, fg_color="transparent", 
+                                       hover_color=("gray70", "gray30"),
+                                       font=ctk.CTkFont(size=24), command=self.toggle_sidebar)
+        self.btn_toggle.grid(row=0, column=0, padx=(10, 10), pady=20, sticky="w")
+
+        self.logo_label = ctk.CTkLabel(self.sidebar, text="SmartOCR-RC", font=ctk.CTkFont(size=20, weight="bold"))
+        self.logo_label.grid(row=0, column=0, padx=(60, 20), pady=20, sticky="w")
+
+        # Navigation Buttons
+        self.nav_buttons = {}
+        
+        nav_items = [
+            ("search", "🔍  Search Ration Card", self.btn_search_event),
+            ("db_tools", "📊  RC Database Tools", self.btn_db_tools_event),
+            ("batch", "📦  Batch Processing", self.btn_batch_event),
+            ("viewer", "🖼️  Image Viewer", self.btn_viewer_event),
+            ("settings", "⚙️  Settings", self.btn_settings_event)
+        ]
+
+        for i, (name, text, cmd) in enumerate(nav_items, start=1):
+            btn = ctk.CTkButton(self.sidebar, text=text, 
+                               corner_radius=0, height=50, border_spacing=10,
+                               fg_color="transparent", text_color=("gray10", "gray90"), 
+                               hover_color=("gray70", "gray30"),
+                               anchor="w", command=cmd)
+            btn.grid(row=i, column=0, sticky="ew")
+            self.nav_buttons[name] = (btn, text)
 
         # Bottom UI controls
-        ctk.CTkLabel(self.sidebar, text="Appearance:").pack(side="bottom", padx=20, pady=(0, 5))
         self.appearance_menu = ctk.CTkOptionMenu(self.sidebar, values=["Light", "Dark", "System"], command=ctk.set_appearance_mode)
-        self.appearance_menu.pack(side="bottom", padx=20, pady=(0, 20))
+        self.appearance_menu.grid(row=8, column=0, padx=10, pady=20, sticky="s")
         self.appearance_menu.set("Dark")
+
+    def toggle_sidebar(self):
+        if self.sidebar_is_expanded:
+            # Collapse
+            self.sidebar.configure(width=self.sidebar_width_collapsed)
+            self.logo_label.grid_remove()
+            for name, (btn, full_text) in self.nav_buttons.items():
+                icon = full_text.split("  ")[0] # Extract icon part
+                btn.configure(text=icon, anchor="center")
+            self.appearance_menu.grid_remove()
+            self.sidebar_is_expanded = False
+        else:
+            # Expand
+            self.sidebar.configure(width=self.sidebar_width_expanded)
+            self.logo_label.grid(row=0, column=0, padx=(60, 20), pady=20, sticky="w")
+            for name, (btn, full_text) in self.nav_buttons.items():
+                btn.configure(text=full_text, anchor="w")
+            self.appearance_menu.grid(row=8, column=0, padx=10, pady=20, sticky="s")
+            self.sidebar_is_expanded = True
 
     def _setup_main_content(self):
         self.main_container = ctk.CTkFrame(self, corner_radius=0, fg_color="transparent")
-        self.main_container.grid(row=0, column=1, sticky="nsew", padx=20, pady=20)
+        self.main_container.grid(row=0, column=1, sticky="nsew")
         self.main_container.grid_columnconfigure(0, weight=1)
-        self.main_container.grid_rowconfigure(2, weight=1)
+        self.main_container.grid_rowconfigure(0, weight=1)
 
-        ctk.CTkLabel(self.main_container, text="Configuration Settings", font=ctk.CTkFont(size=24, weight="bold")).grid(row=0, column=0, sticky="w", pady=(0, 20))
-
-        # Path Overrides
-        self.path_frame = ctk.CTkFrame(self.main_container)
-        self.path_frame.grid(row=1, column=0, sticky="ew", pady=(0, 20))
-        self.path_frame.grid_columnconfigure(1, weight=1)
-
-        self._create_path_row("Input:", "default_input_dir", 0)
-        self._create_path_row("Output:", "default_output_dir", 1)
-
-        # Settings Tabs/Panes
-        self.tabview = ctk.CTkTabview(self.main_container)
-        self.tabview.grid(row=2, column=0, sticky="nsew")
-        
-        self.tab_ocr = self.tabview.add("OCR Engine")
-        self.tab_llm = self.tabview.add("LLM Service")
-        
-        self.ocr_pane = SettingsPane(self.tab_ocr, "OCR Parameters", OCR_SETTINGS, HELP_TEXT, fg_color="transparent")
-        self.ocr_pane.pack(fill="both", expand=True)
-        
-        self.llm_pane = SettingsPane(self.tab_llm, "LLM Parameters", LLM_SETTINGS, HELP_TEXT, fg_color="transparent")
-        self.llm_pane.pack(fill="both", expand=True)
-
-        # Footer Buttons
-        btn_frame = ctk.CTkFrame(self.main_container, fg_color="transparent")
-        btn_frame.grid(row=3, column=0, pady=20)
-        
-        ctk.CTkButton(btn_frame, text="Save Settings", command=self.save_all).pack(side="left", padx=10)
-        ctk.CTkButton(btn_frame, text="Revert Defaults", fg_color="transparent", border_width=2, command=self.revert).pack(side="left", padx=10)
+        # Initialize frames
+        self.search_frame = SearchView(self.main_container, fg_color="transparent")
+        self.settings_frame = SettingsView(self.main_container, fg_color="transparent")
 
     def _setup_status_bar(self):
         self.status_bar = ctk.CTkFrame(self, height=30, corner_radius=0)
@@ -119,6 +119,37 @@ class Dashboard(ctk.CTk):
         
         self.llm_status_label = ctk.CTkLabel(self.status_bar, text="LLM: Checking...", font=ctk.CTkFont(size=11))
         self.llm_status_label.pack(side="left", padx=20)
+
+    def select_frame_by_name(self, name):
+        # Update button colors
+        for btn_name, (btn, _) in self.nav_buttons.items():
+            btn.configure(fg_color=("gray75", "gray25") if btn_name == name else "transparent")
+
+        # Show/Hide frames
+        if name == "search":
+            self.search_frame.grid(row=0, column=0, sticky="nsew")
+        else:
+            self.search_frame.grid_forget()
+            
+        if name == "settings":
+            self.settings_frame.grid(row=0, column=0, sticky="nsew")
+        else:
+            self.settings_frame.grid_forget()
+
+    def btn_search_event(self):
+        self.select_frame_by_name("search")
+
+    def btn_db_tools_event(self):
+        self.open_rc_processor_window() # Temporary for Phase 1
+
+    def btn_batch_event(self):
+        self.open_batch_window() # Temporary for Phase 1
+
+    def btn_viewer_event(self):
+        self.open_viewer_window() # Temporary for Phase 1
+
+    def btn_settings_event(self):
+        self.select_frame_by_name("settings")
 
     def check_dependencies(self):
         from src.utils.threading import run_in_background
@@ -158,7 +189,6 @@ class Dashboard(ctk.CTk):
 
             self.after(0, lambda: self.llm_status_label.configure(text=llm_status[0], text_color=llm_status[1]))
 
-            # Check Specific Models if service is ready
             if llm_ready:
                 self.after(0, self._check_llm_models)
 
@@ -215,40 +245,6 @@ class Dashboard(ctk.CTk):
             self.after(0, finish)
             
         run_in_background(do_download)
-
-    def _create_path_row(self, label, config_key, row):
-        ctk.CTkLabel(self.path_frame, text=label, font=ctk.CTkFont(weight="bold")).grid(row=row, column=0, padx=10, pady=10, sticky="w")
-        entry = ctk.CTkEntry(self.path_frame)
-        entry.insert(0, OCR_SETTINGS.get(config_key, ""))
-        entry.grid(row=row, column=1, padx=10, pady=10, sticky="ew")
-        ctk.CTkButton(self.path_frame, text="Browse", width=80, command=lambda e=entry: self._browse(e)).grid(row=row, column=2, padx=10, pady=10)
-        setattr(self, f"{config_key}_entry", entry)
-
-    def _browse(self, entry):
-        path = browse_directory()
-        if path:
-            entry.delete(0, "end")
-            entry.insert(0, path)
-
-    def save_all(self):
-        ocr_vals = self.ocr_pane.get_values()
-        ocr_vals["default_input_dir"] = self.default_input_dir_entry.get()
-        ocr_vals["default_output_dir"] = self.default_output_dir_entry.get()
-        
-        llm_vals = self.llm_pane.get_values()
-        
-        save_config(ocr_vals, llm_vals)
-        messagebox.showinfo("Success", "Configuration saved successfully.")
-
-    def revert(self):
-        if messagebox.askyesno("Confirm", "Revert to factory defaults?"):
-            self.ocr_pane.set_values(FACTORY_DEFAULTS["OCR_SETTINGS"])
-            self.llm_pane.set_values(FACTORY_DEFAULTS["LLM_SETTINGS"])
-            
-            self.default_input_dir_entry.delete(0, "end")
-            self.default_input_dir_entry.insert(0, FACTORY_DEFAULTS["OCR_SETTINGS"]["default_input_dir"])
-            self.default_output_dir_entry.delete(0, "end")
-            self.default_output_dir_entry.insert(0, FACTORY_DEFAULTS["OCR_SETTINGS"]["default_output_dir"])
 
     def open_batch_window(self):
         if hasattr(self, "bw") and self.bw.winfo_exists():
