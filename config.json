@@ -18,7 +18,7 @@
         "crop_padding": 100,
         "auto_crop": true,
         "dump_text_flow": true,
-        "viewer_font_size": 26,
+        "viewer_font_size": 30,
         "debt_db_score_mode": "slow",
         "rec_batch_num": 20,
         "viewer_font_size_primary": 20,

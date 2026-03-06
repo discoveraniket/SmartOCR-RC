@@ -14,7 +14,7 @@ from qfluentwidgets import (SubtitleLabel, setFont, CaptionLabel, PushButton,
                             PrimaryToolButton, TransparentToolButton,
                             FluentIcon as FIF, InfoBar, InfoBarPosition, CardWidget,
                             LineEdit, StrongBodyLabel, BodyLabel, ScrollArea,
-                            SmoothScrollArea)
+                            SmoothScrollArea, SimpleCardWidget)
 
 from src.core.result_handler import ResultDataHandler
 from src.core.coordinator import PipelineCoordinator
@@ -202,68 +202,52 @@ class ImageViewerView(QFrame):
         self.side_panel.setFixedWidth(420)
         self.side_panel_layout = QVBoxLayout(self.side_panel)
         self.side_panel_layout.setContentsMargins(15, 15, 15, 15)
-        self.side_panel_layout.setSpacing(20)
+        self.side_panel_layout.setSpacing(12)
         
-        # Header
-        self.side_header_layout = QHBoxLayout()
-        self.side_title = SubtitleLabel("Extraction Data")
-        setFont(self.side_title, 20)
-        self.side_header_layout.addWidget(self.side_title)
+        # Data Card for Fields
+        self.data_card = SimpleCardWidget(self.side_panel)
+        self.data_card_layout = QVBoxLayout(self.data_card)
+        self.data_card_layout.setContentsMargins(2, 2, 2, 2)
         
-        # Font size controls
-        self.font_ctrl_layout = QHBoxLayout()
-        self.font_ctrl_layout.setSpacing(2)
-        
-        self.font_up_btn = create_icon_btn(FIF.ADD, "Increase Font Size", self.side_panel, size=32, icon_size=16)
-        self.font_up_btn.clicked.connect(lambda: self.change_font_size(2))
-        
-        self.font_down_btn = create_icon_btn(FIF.REMOVE, "Decrease Font Size", self.side_panel, size=32, icon_size=16)
-        self.font_down_btn.clicked.connect(lambda: self.change_font_size(-2))
-        
-        self.font_ctrl_layout.addWidget(self.font_down_btn)
-        self.font_ctrl_layout.addWidget(self.font_up_btn)
-        self.side_header_layout.addLayout(self.font_ctrl_layout)
-        
-        self.settings_btn = create_icon_btn(FIF.SETTING, "Session Settings", self.side_panel, size=32, icon_size=16)
-        self.settings_btn.clicked.connect(self.open_settings)
-        self.side_header_layout.addWidget(self.settings_btn)
-        
-        self.side_panel_layout.addLayout(self.side_header_layout)
-        
-        # Fields Scroll Area
+        # Fields Scroll Area inside Card
         self.scroll_area = SmoothScrollArea()
         self.scroll_area.setWidgetResizable(True)
         self.scroll_area.setFrameShape(QFrame.NoFrame)
+        self.scroll_area.setStyleSheet("background: transparent;")
+        
         self.fields_widget = QFrame()
         self.fields_layout = QVBoxLayout(self.fields_widget)
+        self.fields_layout.setContentsMargins(10, 10, 10, 10)
+        self.fields_layout.setSpacing(10)
         self.fields_layout.setAlignment(Qt.AlignTop)
         self.scroll_area.setWidget(self.fields_widget)
         
-        self.side_panel_layout.addWidget(self.scroll_area, 1)
+        self.data_card_layout.addWidget(self.scroll_area)
+        self.side_panel_layout.addWidget(self.data_card, 1)
         
         # Actions
         self.save_data_btn = PrimaryPushButton("Save Changes", self.side_panel)
-        self.save_data_btn.setFixedHeight(45)
+        self.save_data_btn.setFixedHeight(40)
         self.save_data_btn.clicked.connect(self.save_edits)
-        setFont(self.save_data_btn, 16)
+        setFont(self.save_data_btn, 14)
         self.side_panel_layout.addWidget(self.save_data_btn)
         
         self.secondary_actions_layout = QHBoxLayout()
-        self.secondary_actions_layout.setSpacing(10)
+        self.secondary_actions_layout.setSpacing(8)
         
         self.reprocess_btn = PushButton(FIF.SYNC, "AI Re-process", self.side_panel)
-        self.reprocess_btn.setFixedHeight(35)
+        self.reprocess_btn.setFixedHeight(32)
         self.reprocess_btn.clicked.connect(self.reprocess_image)
-        setFont(self.reprocess_btn, 14)
+        setFont(self.reprocess_btn, 13)
         
         self.log_btn = PushButton(FIF.DOCUMENT, "Log", self.side_panel)
-        self.log_btn.setFixedWidth(80)
-        self.log_btn.setFixedHeight(35)
+        self.log_btn.setFixedWidth(70)
+        self.log_btn.setFixedHeight(32)
         self.log_btn.clicked.connect(self.view_log)
-        setFont(self.log_btn, 14)
+        setFont(self.log_btn, 13)
         
-        self.delete_btn = create_icon_btn(FIF.DELETE, "Delete Item", self.side_panel, size=45, icon_size=18)
-        self.delete_btn.setFixedHeight(35)
+        self.delete_btn = create_icon_btn(FIF.DELETE, "Delete Item", self.side_panel, size=32, icon_size=14)
+        self.delete_btn.setFixedHeight(32)
         # Subtle red for delete
         self.delete_btn.setStyleSheet("""
             ToolButton {
@@ -281,12 +265,34 @@ class ImageViewerView(QFrame):
         self.secondary_actions_layout.addWidget(self.log_btn)
         self.secondary_actions_layout.addWidget(self.delete_btn)
         self.side_panel_layout.addLayout(self.secondary_actions_layout)
+
+        # Footer row with Metrics and Controls
+        self.footer_layout = QHBoxLayout()
+        self.footer_layout.setContentsMargins(0, 0, 0, 0)
         
-        # Metrics
         self.metrics_label = CaptionLabel("", self.side_panel)
         self.metrics_label.setStyleSheet("color: #888888;")
-        setFont(self.metrics_label, 12)
-        self.side_panel_layout.addWidget(self.metrics_label)
+        setFont(self.metrics_label, 11)
+        self.footer_layout.addWidget(self.metrics_label, 1)
+
+        self.font_ctrl_layout = QHBoxLayout()
+        self.font_ctrl_layout.setSpacing(2)
+        
+        self.font_up_btn = create_icon_btn(FIF.ADD, "Increase Font Size", self.side_panel, size=28, icon_size=14)
+        self.font_up_btn.clicked.connect(lambda: self.change_font_size(2))
+        
+        self.font_down_btn = create_icon_btn(FIF.REMOVE, "Decrease Font Size", self.side_panel, size=28, icon_size=14)
+        self.font_down_btn.clicked.connect(lambda: self.change_font_size(-2))
+        
+        self.font_ctrl_layout.addWidget(self.font_down_btn)
+        self.font_ctrl_layout.addWidget(self.font_up_btn)
+        self.footer_layout.addLayout(self.font_ctrl_layout)
+        
+        self.settings_btn = create_icon_btn(FIF.SETTING, "Session Settings", self.side_panel, size=28, icon_size=14)
+        self.settings_btn.clicked.connect(self.open_settings)
+        self.footer_layout.addWidget(self.settings_btn)
+
+        self.side_panel_layout.addLayout(self.footer_layout)
 
         # Add to splitter
         self.splitter.addWidget(self.viewport_container)
@@ -339,23 +345,28 @@ class ImageViewerView(QFrame):
         if not item:
             self.counter_label.setText("0 / 0")
             self.filename_label.setText("No results found")
-            return
-            
-        total = len(self.handler.results)
-        current = self.handler.current_index + 1
-        self.counter_label.setText(f"{current} / {total}")
-        self.handler.save_last_index()
+            # Clear image
+            self.viewer.scene.clear()
+            self.viewer.pixmap_item = QGraphicsPixmapItem()
+            self.viewer.pixmap_item.setTransformationMode(Qt.SmoothTransformation)
+            self.viewer.scene.addItem(self.viewer.pixmap_item)
+            self.viewer._empty = True
+        else:
+            total = len(self.handler.results)
+            current = self.handler.current_index + 1
+            self.counter_label.setText(f"{current} / {total}")
+            self.handler.save_last_index()
 
-        image_name = item.get('processed_image_name', 'Unknown')
-        self.filename_label.setText(image_name)
-        
-        img_path = self.handler.get_image_path(item)
-        if img_path and os.path.exists(img_path):
-            pixmap = QPixmap(img_path)
-            if not pixmap.isNull():
-                self.viewer.set_pixmap(pixmap)
-            else:
-                logger.error(f"Failed to load image pixmap: {img_path}")
+            image_name = item.get('processed_image_name', 'Unknown')
+            self.filename_label.setText(image_name)
+            
+            img_path = self.handler.get_image_path(item)
+            if img_path and os.path.exists(img_path):
+                pixmap = QPixmap(img_path)
+                if not pixmap.isNull():
+                    self.viewer.set_pixmap(pixmap)
+                else:
+                    logger.error(f"Failed to load image pixmap: {img_path}")
         
         self._refresh_data_fields(item)
 
@@ -369,8 +380,12 @@ class ImageViewerView(QFrame):
         self.entries = {}
         font_size = OCR_SETTINGS.get("viewer_font_size", 14)
         
-        for key, value in item.items():
-            if key == "processed_image_name": continue
+        # Define the specific fields to display
+        display_fields = ["category", "id", "name", "mobile"]
+        
+        for key in display_fields:
+            # Get value from item if it exists, otherwise empty
+            value = item.get(key, "") if item else ""
             
             field_container = QFrame()
             field_vbox = QVBoxLayout(field_container)
@@ -383,7 +398,8 @@ class ImageViewerView(QFrame):
             field_vbox.addWidget(label)
             
             entry = LineEdit()
-            entry.setText(str(value))
+            entry.setText(str(value) if value is not None else "")
+            entry.setPlaceholderText(f"{key.lower()}...")
             setFont(entry, font_size)
             if font_size > 18:
                 entry.setFixedHeight(font_size + 15)
