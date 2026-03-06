@@ -60,7 +60,7 @@ Migrate the entire application interface from `customtkinter` to `PySide6` using
     - Handle real-time logs in a `TextEdit`.
 - [x] **Image Viewer View:**
     - Port the interactive viewer (Zoom, pan, OCR bounding box overlays).
-    - Optimized with `IconButton` for perfect icon alignment.
+    - Optimized with `ToolButton` for perfect icon alignment and explicit font sizing.
 - [x] **Integrity Check:** Run `run_tests.py`.
 - [x] **Validation:** User confirmed Viewer.
 
@@ -69,10 +69,21 @@ Migrate the entire application interface from `customtkinter` to `PySide6` using
 ## 🛠️ Troubleshooting & Lessons Learned
 
 ### QFont::setPointSize: Point size <= 0 (-1)
-- Terminal warnings when hovering over `ToolButton` or icon-only `PushButton` with a `setToolTip`.
-- Avoid `ToolButton` for custom-styled toolbars if hover warnings persist; `IconButton` is a more robust alternative for square icon buttons.
+- **Symptom:** Terminal warnings when hovering over `ToolButton` or icon-only buttons with a `setToolTip`.
+- **Cause:** `qfluentwidgets` components occasionally default to an uninitialized font metric during state transitions. The `setFont(widget, 14)` library helper sometimes fails to suppress this if internal size hints are unstable.
+- **Fix:** 
+    1. Use `ToolButton` for square, icon-only buttons (centers icons perfectly unlike `PushButton`).
+    2. Use the native `setFont` with an explicit `setPointSize`:
+       ```python
+       font = btn.font()
+       font.setPointSize(10)
+       btn.setFont(font)
+       ```
+    3. **StyleSheet Warning:** Calling `setStyleSheet()` can reset the font state. Always re-apply the font fix *after* applying custom CSS (e.g., for the red Delete button).
 
----
+### Button Alignment
+- **Issue:** Standard `PushButton` with `setFixedSize` often misaligns or clips icons when no text is provided.
+- **Solution:** Use `ToolButton`. It is specifically designed for icon-only use cases and handles Fluent styling more gracefully for control buttons.
 
 ## 🧹 Final Cleanup (Post-Transition)
 Once the PySide6 version reaches 100% feature parity and is verified:

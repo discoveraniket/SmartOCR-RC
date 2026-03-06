@@ -4,13 +4,14 @@ from pathlib import Path
 from typing import Optional, Dict
 
 from PySide6.QtCore import Qt, QSize, QPointF, Signal, Slot
-from PySide6.QtGui import QPixmap, QPainter, QWheelEvent, QMouseEvent, QImage, QShortcut, QKeySequence
+from PySide6.QtGui import QPixmap, QPainter, QWheelEvent, QMouseEvent, QImage, QShortcut, QKeySequence, QFont
 from PySide6.QtWidgets import (QFrame, QVBoxLayout, QHBoxLayout, QGraphicsView, 
                              QGraphicsScene, QGraphicsPixmapItem, QFileDialog,
                              QScrollArea, QSizePolicy, QSplitter)
 
 from qfluentwidgets import (SubtitleLabel, setFont, CaptionLabel, PushButton, 
                             PrimaryPushButton, ToolButton, TransparentPushButton,
+                            PrimaryToolButton, TransparentToolButton,
                             FluentIcon as FIF, InfoBar, InfoBarPosition, CardWidget,
                             LineEdit, StrongBodyLabel, BodyLabel, ScrollArea,
                             SmoothScrollArea)
@@ -134,13 +135,16 @@ class ImageViewerView(QFrame):
         self.bottom_bar_layout.setContentsMargins(0, 15, 0, 0)
         self.bottom_bar_layout.setSpacing(10)
         
-        # Helper to create squared PushButtons with centered icons
+        # Helper to create squared ToolButtons with centered icons
         def create_icon_btn(icon, tooltip, parent, size=36, icon_size=18):
-            btn = PushButton(icon, "", parent)
+            btn = ToolButton(icon, parent)
             btn.setToolTip(tooltip)
             btn.setFixedSize(size, size)
             btn.setIconSize(QSize(icon_size, icon_size))
-            setFont(btn, 14)
+            # Set font with pointSize to avoid "Point size <= 0 (-1)" warning
+            font = btn.font()
+            font.setPointSize(10)
+            btn.setFont(font)
             return btn
 
         # Navigation Group (Left)
@@ -262,11 +266,11 @@ class ImageViewerView(QFrame):
         self.delete_btn.setFixedHeight(35)
         # Subtle red for delete
         self.delete_btn.setStyleSheet("""
-            PushButton {
+            ToolButton {
                 background-color: rgba(255, 68, 68, 0.1);
                 border: 1px solid rgba(255, 68, 68, 0.2);
             }
-            PushButton:hover {
+            ToolButton:hover {
                 background-color: rgba(255, 68, 68, 0.2);
                 border: 1px solid rgba(255, 68, 68, 0.4);
             }
