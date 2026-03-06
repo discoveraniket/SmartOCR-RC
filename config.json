@@ -18,12 +18,12 @@
         "crop_padding": 100,
         "auto_crop": true,
         "dump_text_flow": true,
-        "viewer_font_size": 32,
+        "viewer_font_size": 26,
+        "debt_db_score_mode": "slow",
+        "rec_batch_num": 20,
         "viewer_font_size_primary": 20,
         "viewer_font_size_standard": 15,
-        "det_db_score_mode": "slow",
-        "rec_batch_num": 20
-
+        "det_db_score_mode": "slow"
     },
     "LLM_SETTINGS": {
         "step1_model": "qwen2.5:14b-instruct",

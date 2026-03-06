@@ -58,10 +58,27 @@ Migrate the entire application interface from `customtkinter` to `PySide6` using
 - [x] **Batch Processing View:**
     - Port the `BatchProcessor` UI (Progress bars, file discovery list).
     - Handle real-time logs in a `TextEdit`.
-- [ ] **Image Viewer View (INCOMPLETE - NEEDS REWORK):**
+- [x] **Image Viewer View:**
     - Port the interactive viewer (Zoom, pan, OCR bounding box overlays).
+    - Optimized with `IconButton` for perfect icon alignment.
 - [x] **Integrity Check:** Run `run_tests.py`.
-- [ ] **Validation:** Wait for User check.
+- [x] **Validation:** User confirmed Viewer.
+
+---
+
+## 🛠️ Troubleshooting & Lessons Learned
+
+### QFont::setPointSize: Point size <= 0 (-1)
+- **Symptom:** Terminal warnings when hovering over `ToolButton` or icon-only `PushButton` with a `setToolTip`.
+- **Cause:** `qfluentwidgets` components occasionally default to an uninitialized font metric during hover state transitions if no text is present.
+- **Fix:** 
+    1. Use `setFont(widget, 14)` (or any valid positive size) explicitly during initialization.
+    2. Prefer `IconButton` for square, icon-only buttons to ensure internal font metrics are stable and icons are perfectly centered.
+    3. Avoid `ToolButton` for custom-styled toolbars if hover warnings persist; `IconButton` is a more robust alternative for square icon buttons.
+
+### Button Alignment
+- **Issue:** Standard `PushButton` with a fixed `setFixedSize` often misaligns or clips icons when no text is provided.
+- **Solution:** Use `IconButton`. It is specifically designed to center icons and handles the `qfluentwidgets` styling more gracefully for square control buttons.
 
 ---
 

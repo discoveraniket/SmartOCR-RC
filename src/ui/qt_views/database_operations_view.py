@@ -43,7 +43,8 @@ class StepIndicator(QFrame):
             self.layout.addWidget(lbl)
             
             if i < len(self.steps) - 1:
-                icon = IconWidget(FIF.CHEVRON_RIGHT, self)
+                # icon = IconWidget(FIF.CHEVRON_RIGHT, self) (for redundancy)
+                icon = IconWidget(FIF.RIGHT_ARROW, self)
                 icon.setFixedSize(14, 14)
                 self.layout.addWidget(icon)
         
